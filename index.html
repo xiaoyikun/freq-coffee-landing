@@ -1,0 +1,1574 @@
+<!doctype html>
+<html lang="zh-CN" data-lang="zh">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>FREQ. 频率咖啡 — 调到你这一频。</title>
+<meta name="description" content="FREQ. Coffee — Tune in. Stay caffeinated. 把咖啡豆做成频率：浅烘=高频，深烘=低频。" />
+
+<!-- Design System: Warp 骨架 + Wired 借调 Hero · 设计令牌严格对齐 freq-* 变量 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;800;900&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+
+<style>
+/* =========================================================
+   FREQ. — Design Tokens
+   ========================================================= */
+:root{
+  /* Color · Ink (深紫骨架) */
+  --freq-ink-900:#1B1646;
+  --freq-ink-700:#2D2466;
+  --freq-ink-500:#4A3F8C;
+  --freq-void-950:#0B0820;
+  /* Color · Signal (电光绿，仅 ≤8% 面积) */
+  --freq-signal-500:#5BFF8F;
+  --freq-signal-400:#3DDC7B;
+  --freq-signal-700:#1FA85C;
+  /* Color · Cream (暖米白调和，必须每屏出现) */
+  --freq-cream-50:#F2E8D5;
+  --freq-cream-100:#F8F1E2;
+  --freq-cream-200:#E8DCC2;
+  /* Color · Neutral / Status */
+  --freq-carbon-700:#3A3450;
+  --freq-static-400:#8B82A8;
+  --freq-amber-500:#FFB547;
+  --freq-coral-500:#FF6B6B;
+
+  /* Typography */
+  --font-display:'Unbounded', system-ui, sans-serif;
+  --font-body:'Space Grotesk', system-ui, sans-serif;
+  --font-mono:'JetBrains Mono', ui-monospace, monospace;
+  --font-cn:'Noto Sans SC', system-ui, sans-serif;
+
+  /* Type scale */
+  --text-mega:clamp(8rem, 22vw, 18rem);
+  --text-display-1:clamp(3.5rem, 7vw, 5.5rem);
+  --text-display-2:clamp(2.5rem, 5vw, 3.75rem);
+
+  /* Spacing 4px base */
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+  --space-5:24px; --space-6:32px; --space-7:48px; --space-8:64px;
+  --space-9:96px; --space-10:128px; --space-11:192px; --space-12:256px;
+
+  /* Motion */
+  --ease-warp:cubic-bezier(0.2,0,0,1);
+}
+
+/* =========================================================
+   Reset
+   ========================================================= */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{
+  background:var(--freq-ink-900);
+  color:var(--freq-cream-50);
+  font-family:var(--font-body);
+  font-size:1rem;
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  overflow-x:hidden;
+}
+img,svg{display:block;max-width:100%}
+button,input{font:inherit;color:inherit;border:0;background:transparent;outline:0}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2px solid var(--freq-signal-500);outline-offset:3px}
+::selection{background:var(--freq-signal-500);color:var(--freq-ink-900)}
+
+/* Containers */
+.container{max-width:1320px;margin:0 auto;padding:0 var(--space-5)}
+@media (min-width:768px){.container{padding:0 var(--space-7)}}
+
+/* =========================================================
+   i18n display rules — global lang switcher
+   ========================================================= */
+/* 默认中文模式: 隐藏 .en-only */
+html[data-lang="zh"] .en-only{display:none !important}
+html[data-lang="en"] .zh-only{display:none !important}
+/* .bilingual 始终显示 — 用于核心 wordmark / 品牌专有名词 */
+
+/* =========================================================
+   Top Nav
+   ========================================================= */
+.nav{
+  position:fixed;top:0;left:0;right:0;z-index:50;
+  padding:var(--space-4) 0;
+  transition:background-color .25s var(--ease-warp), backdrop-filter .25s var(--ease-warp), border-color .25s var(--ease-warp);
+  border-bottom:1px solid transparent;
+}
+.nav.is-scrolled{
+  background:color-mix(in srgb, var(--freq-ink-900) 95%, transparent);
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+  border-bottom-color:var(--freq-ink-500);
+}
+.nav__inner{display:flex;align-items:center;justify-content:space-between;gap:var(--space-5)}
+.wordmark{
+  font-family:var(--font-display);
+  font-weight:800;
+  font-size:1.125rem;
+  letter-spacing:-0.02em;
+  color:var(--freq-cream-50);
+  display:inline-flex;align-items:baseline;gap:2px;
+}
+.wordmark .dot{color:var(--freq-signal-500)}
+.nav__menu{display:none;align-items:center;gap:var(--space-6)}
+@media (min-width:1024px){.nav__menu{display:flex}}
+.nav__link{
+  font-family:var(--font-mono);
+  font-weight:500;
+  font-size:.75rem;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:var(--freq-cream-50);
+  position:relative;padding:var(--space-2) 0;
+  transition:color .2s var(--ease-warp);
+}
+.nav__link:hover{color:var(--freq-signal-500)}
+.nav__link::after{
+  content:"";position:absolute;left:0;right:0;bottom:-2px;height:1.5px;
+  background:var(--freq-signal-500);
+  transform:scaleX(0);transform-origin:left;
+  transition:transform .25s var(--ease-warp);
+}
+.nav__link:hover::after{transform:scaleX(1)}
+
+.lang-switch{
+  display:inline-flex;align-items:center;gap:0;
+  font-family:var(--font-mono);font-weight:700;font-size:.6875rem;
+  letter-spacing:.12em;text-transform:uppercase;
+  border:1.5px solid var(--freq-ink-500);
+  padding:0;
+}
+.lang-switch button{
+  padding:6px 10px;color:var(--freq-static-400);cursor:pointer;
+  transition:color .2s var(--ease-warp), background-color .2s var(--ease-warp);
+}
+.lang-switch button.is-active{
+  background:var(--freq-cream-50);color:var(--freq-ink-900);
+}
+.lang-switch button:not(.is-active):hover{color:var(--freq-cream-50)}
+
+.nav__hamburger{
+  display:inline-flex;flex-direction:column;gap:5px;
+  padding:8px;cursor:pointer;
+}
+.nav__hamburger span{
+  display:block;width:22px;height:1.5px;background:var(--freq-cream-50);
+  transition:transform .25s var(--ease-warp), opacity .25s var(--ease-warp);
+}
+@media (min-width:1024px){.nav__hamburger{display:none}}
+.nav.is-open .nav__hamburger span:nth-child(1){transform:translateY(6.5px) rotate(45deg)}
+.nav.is-open .nav__hamburger span:nth-child(2){opacity:0}
+.nav.is-open .nav__hamburger span:nth-child(3){transform:translateY(-6.5px) rotate(-45deg)}
+
+.mobile-menu{
+  position:fixed;inset:0;z-index:45;
+  background:var(--freq-ink-900);
+  padding:96px var(--space-5) var(--space-7);
+  display:flex;flex-direction:column;gap:var(--space-5);
+  transform:translateY(-100%);
+  transition:transform .35s var(--ease-warp);
+}
+.mobile-menu.is-open{transform:translateY(0)}
+.mobile-menu .nav__link{font-size:1.5rem;letter-spacing:.08em}
+@media (min-width:1024px){.mobile-menu{display:none}}
+
+/* =========================================================
+   Buttons
+   ========================================================= */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  gap:var(--space-2);
+  font-family:var(--font-mono);font-weight:700;font-size:.875rem;
+  letter-spacing:.12em;text-transform:uppercase;
+  padding:16px 28px;border-radius:0;cursor:pointer;
+  transition:transform .2s var(--ease-warp), box-shadow .25s var(--ease-warp), background-color .2s var(--ease-warp), border-width .2s var(--ease-warp), color .2s var(--ease-warp);
+  white-space:nowrap;
+}
+.btn--primary{
+  background:var(--freq-signal-500);
+  color:var(--freq-ink-900);
+}
+.btn--primary:hover{
+  background:var(--freq-signal-400);
+  transform:translateY(-2px);
+  box-shadow:0 0 24px var(--freq-signal-500), 0 0 48px rgba(91,255,143,.3);
+}
+.btn--primary:active{background:var(--freq-signal-700);transform:translateY(0)}
+.btn--secondary{
+  background:transparent;color:var(--freq-cream-50);
+  border:1.5px solid var(--freq-cream-50);
+}
+.btn--secondary:hover{
+  border-width:2.5px;
+  background:rgba(242,232,213,.08);
+  padding:14.5px 26.5px;
+}
+.btn--ghost{
+  font-family:var(--font-mono);font-weight:700;font-size:.75rem;
+  letter-spacing:.16em;text-transform:uppercase;
+  padding:0;display:inline-flex;align-items:center;gap:6px;
+  color:inherit;border-bottom:1.5px solid currentColor;padding-bottom:4px;
+  transition:color .2s var(--ease-warp), gap .2s var(--ease-warp);
+}
+.btn--ghost:hover{color:var(--freq-signal-500);gap:10px}
+.btn--ghost.dark:hover{color:var(--freq-ink-900)}
+
+/* =========================================================
+   Hero · Screen 1
+   ========================================================= */
+.hero{
+  position:relative;min-height:100vh;
+  background:var(--freq-ink-900);
+  display:flex;flex-direction:column;
+  padding:120px var(--space-5) var(--space-7);
+  overflow:hidden;
+}
+.hero::before{
+  /* 极淡 scanline 全屏 ≤6% */
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 2px,
+    rgba(242,232,213,.06) 2px,
+    rgba(242,232,213,.06) 3px
+  );
+  opacity:.5; /* combined ~3% */
+  mix-blend-mode:overlay;
+  z-index:1;
+}
+.hero__inner{
+  position:relative;z-index:2;
+  flex:1;display:flex;flex-direction:column;justify-content:center;
+  max-width:1320px;margin:0 auto;width:100%;padding:0 var(--space-2);
+}
+.hero__eyebrow{
+  font-family:var(--font-mono);font-weight:500;font-size:.875rem;
+  letter-spacing:.18em;text-transform:uppercase;
+  color:var(--freq-signal-500);
+  margin-bottom:var(--space-7);
+  display:inline-flex;align-items:center;gap:var(--space-3);
+}
+.hero__eyebrow::before{
+  content:"";display:inline-block;width:32px;height:1.5px;background:var(--freq-signal-500);
+}
+.hero__mega{
+  font-family:var(--font-display);font-weight:800;
+  font-size:var(--text-mega);
+  line-height:.82;
+  letter-spacing:-0.05em;
+  color:var(--freq-cream-50);
+  margin-bottom:var(--space-6);
+}
+.hero__mega .dot{
+  color:var(--freq-signal-500);
+  display:inline-block;
+  animation:phosphor-pulse 2s ease-in-out infinite;
+}
+@keyframes phosphor-pulse{
+  0%,100%{
+    text-shadow:0 0 0 transparent;
+    opacity:1;
+  }
+  50%{
+    text-shadow:0 0 24px var(--freq-signal-500), 0 0 48px rgba(91,255,143,.55), 0 0 96px rgba(91,255,143,.25);
+    opacity:.92;
+  }
+}
+.hero__sub{
+  font-family:var(--font-cn);font-weight:900;
+  font-size:clamp(2rem, 4vw, 3.5rem);
+  letter-spacing:.05em;line-height:1.1;
+  color:var(--freq-cream-50);
+  margin-bottom:var(--space-7);
+  max-width:18ch;
+}
+.hero__cta{
+  display:flex;flex-wrap:wrap;gap:var(--space-4);
+  margin-bottom:var(--space-8);
+}
+.hero__dial{
+  position:relative;z-index:2;
+  margin-top:auto;padding-top:var(--space-6);
+}
+.hero__freq-readout{
+  font-family:var(--font-mono);font-weight:500;font-size:.875rem;
+  letter-spacing:.12em;text-transform:uppercase;
+  color:var(--freq-static-400);
+  display:flex;justify-content:space-between;align-items:end;gap:var(--space-4);
+  margin-bottom:var(--space-3);
+  flex-wrap:wrap;
+}
+.hero__freq-readout strong{
+  color:var(--freq-cream-50);font-weight:500;
+  font-size:1.125rem;letter-spacing:.04em;
+}
+.hero__freq-readout .freq-value{color:var(--freq-signal-500)}
+.hero__dial-bar{
+  display:grid;grid-template-columns:repeat(24, 1fr);
+  gap:0;height:36px;align-items:end;
+  border-bottom:1.5px solid var(--freq-ink-500);
+}
+.hero__dial-bar span{
+  display:block;height:14px;background:var(--freq-ink-500);
+  border-radius:0;
+}
+.hero__dial-bar span.major{
+  height:36px;background:var(--freq-signal-500);
+  box-shadow:0 0 12px rgba(91,255,143,.5);
+}
+.hero__dial-bar span.peak{height:24px}
+
+/* =========================================================
+   Section base
+   ========================================================= */
+.section{padding:var(--space-9) 0;position:relative}
+.section--dark{background:var(--freq-ink-900);color:var(--freq-cream-50)}
+.section--cream{background:var(--freq-cream-100);color:var(--freq-carbon-700)}
+.section--void{background:var(--freq-void-950);color:var(--freq-cream-50)}
+
+.section__head{
+  margin-bottom:var(--space-8);
+  display:flex;flex-direction:column;gap:var(--space-3);
+}
+.section__head .kicker{
+  font-family:var(--font-mono);font-weight:500;font-size:.75rem;
+  letter-spacing:.18em;text-transform:uppercase;
+  color:var(--freq-signal-500);
+  display:inline-flex;align-items:center;gap:var(--space-3);
+}
+.section__head .kicker::before{
+  content:"";display:inline-block;width:24px;height:1.5px;background:currentColor;
+}
+.section--cream .kicker{color:var(--freq-ink-900)}
+.section__title{
+  font-family:var(--font-display);font-weight:800;
+  font-size:var(--text-display-1);line-height:.95;letter-spacing:-0.03em;
+}
+.section__title-cn{
+  font-family:var(--font-cn);font-weight:700;
+  font-size:clamp(1.5rem, 2.4vw, 2.25rem);
+  letter-spacing:.04em;
+  color:var(--freq-static-400);
+}
+.section--cream .section__title-cn{color:var(--freq-carbon-700);opacity:.7}
+.section__lead{
+  font-size:1.0625rem;max-width:62ch;color:var(--freq-static-400);
+  margin-top:var(--space-2);
+}
+.section--cream .section__lead{color:var(--freq-carbon-700);opacity:.8}
+
+/* =========================================================
+   Daily Dose · Screen 2 — Cassette grid
+   ========================================================= */
+.dose-grid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:1.5px;
+  background:var(--freq-ink-500);
+  border:1.5px solid var(--freq-ink-500);
+}
+@media (min-width:640px){.dose-grid{grid-template-columns:repeat(2,1fr)}}
+@media (min-width:1024px){.dose-grid{grid-template-columns:repeat(3,1fr)}}
+
+.cassette{
+  background:var(--freq-ink-900);
+  padding:var(--space-6) var(--space-5) var(--space-5);
+  display:flex;flex-direction:column;gap:var(--space-5);
+  transition:transform .2s var(--ease-warp), background-color .2s var(--ease-warp), box-shadow .25s var(--ease-warp);
+  position:relative;
+  min-height:280px;
+}
+.cassette:hover{
+  transform:translateY(-4px);
+  background:var(--freq-ink-700);
+  box-shadow:inset 0 0 0 1.5px var(--freq-signal-500);
+  z-index:2;
+}
+.cassette__strip{
+  display:grid;grid-template-columns:repeat(24,1fr);
+  gap:2px;height:8px;
+}
+.cassette__strip span{display:block;background:var(--freq-ink-500);height:100%}
+.cassette__strip span:nth-child(4n+1){background:var(--freq-cream-50)}
+.cassette__strip span.peak{background:var(--freq-signal-500)}
+.cassette:hover .cassette__strip span.peak{box-shadow:0 0 8px var(--freq-signal-500)}
+.cassette__name{
+  font-family:var(--font-display);font-weight:700;
+  font-size:clamp(1.625rem, 2.4vw, 2.25rem);
+  letter-spacing:-0.02em;line-height:1;
+  color:var(--freq-cream-50);
+}
+.cassette__name-cn{
+  font-family:var(--font-cn);font-weight:500;font-size:.875rem;
+  color:var(--freq-static-400);margin-top:var(--space-2);letter-spacing:.04em;
+}
+.cassette__meta{
+  margin-top:auto;padding-top:var(--space-4);
+  border-top:1px dashed var(--freq-ink-500);
+  display:flex;flex-direction:column;gap:var(--space-2);
+  font-family:var(--font-mono);font-weight:500;font-size:.6875rem;
+  letter-spacing:.12em;text-transform:uppercase;
+  color:var(--freq-static-400);
+}
+.cassette__meta .row{display:flex;justify-content:space-between;gap:var(--space-3);align-items:center}
+.cassette__meta .label{color:var(--freq-static-400)}
+.cassette__meta .val{color:var(--freq-cream-50)}
+.cassette__meta .price{color:var(--freq-signal-500);font-size:.8125rem}
+
+/* =========================================================
+   Take It Home · Screen 3 — Retail (Cream)
+   ========================================================= */
+.retail-grid{
+  display:grid;grid-template-columns:1fr;gap:var(--space-5);
+}
+@media (min-width:768px){.retail-grid{grid-template-columns:repeat(2,1fr);gap:var(--space-6)}}
+
+.retail-card{
+  background:var(--freq-cream-200);
+  border:1.5px solid var(--freq-ink-500);
+  padding:0;
+  display:flex;flex-direction:column;gap:0;
+  transition:transform .25s var(--ease-warp), border-color .2s var(--ease-warp), background-color .2s var(--ease-warp), box-shadow .25s var(--ease-warp);
+  position:relative;min-height:300px;
+  overflow:hidden;
+}
+.retail-card:hover{
+  transform:translateY(-4px);
+  border-color:var(--freq-ink-900);
+  background:var(--freq-cream-100);
+  box-shadow:0 16px 40px rgba(27,22,70,.18);
+}
+/* 产品橱窗（上半深紫，保留图片原底色形成对比） */
+.retail-card__shot{
+  position:relative;
+  width:100%;
+  aspect-ratio:1/1;
+  max-height:280px;
+  background:var(--freq-ink-900);
+  overflow:hidden;
+  border-bottom:1.5px solid var(--freq-ink-500);
+}
+.retail-card__shot img{
+  width:100%;height:100%;
+  object-fit:cover;
+  object-position:center;
+  transition:transform .35s var(--ease-warp);
+}
+.retail-card:hover .retail-card__shot img{
+  transform:scale(1.03);
+}
+/* 信息层（下半米色，保留原排版） */
+.retail-card__body{
+  padding:var(--space-6) var(--space-6) var(--space-6);
+  display:flex;flex-direction:column;gap:var(--space-4);
+  flex:1;
+}
+.retail-card__index{
+  font-family:var(--font-mono);font-weight:700;font-size:.6875rem;
+  letter-spacing:.16em;text-transform:uppercase;
+  color:var(--freq-ink-900);opacity:.6;
+}
+.retail-card__name{
+  font-family:var(--font-display);font-weight:800;
+  font-size:clamp(2rem, 3.5vw, 2.75rem);
+  letter-spacing:-0.02em;line-height:1;color:var(--freq-ink-900);
+}
+.retail-card__name-cn{
+  font-family:var(--font-cn);font-weight:700;
+  font-size:1.125rem;color:var(--freq-carbon-700);
+}
+.retail-card__desc{
+  font-size:.9375rem;line-height:1.6;color:var(--freq-carbon-700);
+  max-width:42ch;
+}
+.retail-card__foot{
+  margin-top:auto;padding-top:var(--space-4);
+  display:flex;justify-content:space-between;align-items:end;gap:var(--space-3);flex-wrap:wrap;
+}
+.retail-card__price{
+  font-family:var(--font-mono);font-weight:700;font-size:.875rem;
+  letter-spacing:.06em;color:var(--freq-ink-900);
+}
+
+/* =========================================================
+   The Fix · Screen 4 — Manifesto
+   ========================================================= */
+.fix-grid{
+  display:grid;grid-template-columns:1fr;gap:var(--space-7);
+}
+@media (min-width:1024px){.fix-grid{grid-template-columns:1.4fr 1fr;gap:var(--space-9);align-items:start}}
+
+.manifesto{
+  position:relative;
+  border-left:1.5px solid var(--freq-ink-500);
+  padding-left:var(--space-6);
+}
+.manifesto__switch{
+  display:inline-flex;align-items:center;gap:0;
+  font-family:var(--font-mono);font-weight:700;font-size:.6875rem;
+  letter-spacing:.12em;text-transform:uppercase;
+  border:1.5px solid var(--freq-ink-500);
+  margin-bottom:var(--space-5);
+}
+.manifesto__switch button{
+  padding:6px 12px;color:var(--freq-static-400);cursor:pointer;
+  transition:color .2s var(--ease-warp), background-color .2s var(--ease-warp);
+}
+.manifesto__switch button.is-active{background:var(--freq-cream-50);color:var(--freq-ink-900)}
+.manifesto__body{
+  font-family:var(--font-cn);font-weight:400;
+  font-size:clamp(1.125rem, 1.6vw, 1.375rem);
+  line-height:1.75;color:var(--freq-cream-50);
+  letter-spacing:.02em;
+}
+.manifesto__body.en{
+  font-family:var(--font-body);font-weight:400;
+  letter-spacing:0;line-height:1.7;
+}
+.manifesto__body[hidden]{display:none}
+
+.fix-stats{
+  display:grid;grid-template-columns:1fr;gap:var(--space-5);
+}
+@media (min-width:480px){.fix-stats{grid-template-columns:repeat(3,1fr)}}
+.stat{
+  border-top:1.5px solid var(--freq-ink-500);
+  padding-top:var(--space-4);
+  display:flex;flex-direction:column;gap:var(--space-2);
+}
+.stat__num{
+  font-family:var(--font-display);font-weight:800;
+  font-size:clamp(3.5rem, 6vw, 5rem);
+  line-height:.95;letter-spacing:-0.04em;
+  color:var(--freq-signal-500);
+}
+.stat__label{
+  font-family:var(--font-mono);font-weight:500;font-size:.6875rem;
+  letter-spacing:.16em;text-transform:uppercase;
+  color:var(--freq-static-400);
+}
+.stat__label .val{color:var(--freq-cream-50)}
+.stat__desc{font-size:.875rem;color:var(--freq-static-400);line-height:1.5}
+
+/* =========================================================
+   Spots · Screen 5 — Map + List
+   ========================================================= */
+.spots-filter{
+  display:flex;flex-wrap:wrap;gap:var(--space-2);
+  margin-bottom:var(--space-6);
+}
+.chip{
+  font-family:var(--font-mono);font-weight:500;font-size:.6875rem;
+  letter-spacing:.14em;text-transform:uppercase;
+  padding:8px 14px;
+  border:1.5px solid var(--freq-ink-500);
+  color:var(--freq-static-400);
+  cursor:pointer;
+  transition:color .2s var(--ease-warp), border-color .2s var(--ease-warp), background-color .2s var(--ease-warp);
+}
+.chip:hover{color:var(--freq-cream-50);border-color:var(--freq-cream-50)}
+.chip.is-active{
+  background:var(--freq-cream-50);color:var(--freq-ink-900);border-color:var(--freq-cream-50);
+}
+
+.spots-grid{
+  display:grid;grid-template-columns:1fr;gap:var(--space-7);
+  align-items:start;
+}
+@media (min-width:1024px){.spots-grid{grid-template-columns:1fr 1fr;gap:var(--space-7)}}
+
+.spots-list{display:flex;flex-direction:column;gap:0}
+.spot{
+  display:grid;grid-template-columns:auto 1fr auto;gap:var(--space-4);
+  padding:var(--space-5) 0;
+  border-top:1px solid var(--freq-ink-500);
+  cursor:pointer;
+  transition:background-color .2s var(--ease-warp), padding .2s var(--ease-warp);
+  align-items:start;
+}
+.spot:last-child{border-bottom:1px solid var(--freq-ink-500)}
+.spot:hover{padding-left:var(--space-3);padding-right:var(--space-3)}
+.spot:hover .spot__name{color:var(--freq-signal-500)}
+.spot__index{
+  font-family:var(--font-mono);font-weight:700;font-size:.75rem;
+  letter-spacing:.1em;color:var(--freq-static-400);padding-top:6px;
+}
+.spot__name{
+  font-family:var(--font-display);font-weight:700;
+  font-size:1.25rem;line-height:1.2;letter-spacing:-0.01em;
+  color:var(--freq-cream-50);
+  transition:color .2s var(--ease-warp);
+}
+.spot__name-cn{
+  font-family:var(--font-cn);font-weight:500;font-size:.875rem;
+  color:var(--freq-static-400);margin-top:4px;letter-spacing:.03em;
+}
+.spot__addr{
+  margin-top:var(--space-3);font-size:.875rem;color:var(--freq-static-400);
+  line-height:1.55;
+}
+.spot__addr .en{display:block;font-family:var(--font-body);opacity:.75;font-size:.8125rem;margin-top:2px}
+.spot__freq{
+  font-family:var(--font-mono);font-weight:700;font-size:.875rem;
+  letter-spacing:.06em;color:var(--freq-signal-500);
+  padding-top:6px;white-space:nowrap;
+}
+
+.spots-map{
+  background:var(--freq-ink-700);
+  border:1.5px solid var(--freq-ink-500);
+  padding:var(--space-5);
+  position:sticky;top:96px;
+  aspect-ratio:1/1;display:flex;flex-direction:column;
+}
+.spots-map__head{
+  display:flex;justify-content:space-between;align-items:center;
+  font-family:var(--font-mono);font-weight:500;font-size:.6875rem;
+  letter-spacing:.14em;text-transform:uppercase;
+  color:var(--freq-static-400);
+  border-bottom:1px solid var(--freq-ink-500);padding-bottom:var(--space-3);
+  margin-bottom:var(--space-4);
+}
+.spots-map__head .live{color:var(--freq-signal-500);display:inline-flex;align-items:center;gap:6px}
+.spots-map__head .live::before{
+  content:"";display:inline-block;width:6px;height:6px;background:var(--freq-signal-500);
+  animation:phosphor-pulse 1.4s ease-in-out infinite;
+}
+.spots-map svg{flex:1;width:100%;height:100%}
+.spot-marker{transition:transform .25s var(--ease-warp)}
+.spot-marker .pin{
+  fill:var(--freq-signal-500);
+  filter:drop-shadow(0 0 6px rgba(91,255,143,.6));
+}
+.spot-marker.is-active .pin{
+  animation:phosphor-pulse 1.4s ease-in-out infinite;
+}
+.spot-marker .ring{
+  fill:none;stroke:var(--freq-signal-500);stroke-width:1.5;
+  opacity:.5;
+}
+
+.spots-cta{
+  margin-top:var(--space-7);
+  display:flex;justify-content:center;
+}
+.spots-cta .btn{padding:20px 36px;font-size:1rem}
+
+/* =========================================================
+   Stay Tuned · Screen 6 — Newsletter + Footer
+   ========================================================= */
+.tune__inner{
+  display:grid;grid-template-columns:1fr;gap:var(--space-7);
+  align-items:start;
+}
+@media (min-width:768px){.tune__inner{grid-template-columns:1fr 1fr;gap:var(--space-9)}}
+
+.tune__hook{
+  font-family:var(--font-cn);font-weight:700;
+  font-size:clamp(1.25rem, 2vw, 1.625rem);line-height:1.4;
+  color:var(--freq-cream-50);max-width:24ch;
+}
+.tune__hook .en-only{
+  display:block;font-family:var(--font-body);font-weight:500;
+  color:var(--freq-static-400);font-size:.9375rem;margin-top:8px;
+  letter-spacing:.02em;
+}
+.tune__form{
+  display:flex;align-items:end;gap:var(--space-4);
+  flex-wrap:wrap;
+}
+.tune__field{
+  flex:1;min-width:240px;
+  display:flex;flex-direction:column;gap:var(--space-2);
+}
+.tune__label{
+  font-family:var(--font-mono);font-weight:500;font-size:.6875rem;
+  letter-spacing:.16em;text-transform:uppercase;
+  color:var(--freq-static-400);
+}
+.tune__input{
+  background:transparent;
+  border:0;border-bottom:1.5px solid var(--freq-ink-500);
+  padding:10px 0;font-size:1rem;color:var(--freq-cream-50);
+  font-family:var(--font-mono);
+  caret-color:var(--freq-signal-500);
+  transition:border-color .2s var(--ease-warp);
+}
+.tune__input::placeholder{color:var(--freq-static-400);font-family:var(--font-mono)}
+.tune__input:focus{border-bottom-color:var(--freq-signal-500)}
+
+.social{
+  margin-top:var(--space-7);
+  display:flex;flex-wrap:wrap;gap:var(--space-2);
+}
+.social a{
+  font-family:var(--font-mono);font-weight:500;font-size:.6875rem;
+  letter-spacing:.16em;text-transform:uppercase;
+  padding:10px 14px;border:1.5px solid var(--freq-ink-500);
+  color:var(--freq-cream-50);
+  transition:border-color .2s var(--ease-warp), color .2s var(--ease-warp);
+}
+.social a:hover{border-color:var(--freq-signal-500);color:var(--freq-signal-500)}
+
+/* Footer */
+.footer{
+  margin-top:var(--space-9);
+  border-top:1px solid var(--freq-ink-500);
+  padding-top:var(--space-7);
+}
+.footer__grid{
+  display:grid;grid-template-columns:1fr;gap:var(--space-6);
+  margin-bottom:var(--space-7);
+}
+@media (min-width:640px){.footer__grid{grid-template-columns:repeat(2,1fr)}}
+@media (min-width:1024px){.footer__grid{grid-template-columns:1.4fr 1fr 1fr 1fr;gap:var(--space-7)}}
+.footer__col h4{
+  font-family:var(--font-mono);font-weight:700;font-size:.6875rem;
+  letter-spacing:.16em;text-transform:uppercase;
+  color:var(--freq-static-400);margin-bottom:var(--space-4);
+}
+.footer__col ul{list-style:none;display:flex;flex-direction:column;gap:var(--space-3)}
+.footer__col a{
+  font-size:.9375rem;color:var(--freq-cream-50);
+  transition:color .2s var(--ease-warp);
+}
+.footer__col a:hover{color:var(--freq-signal-500)}
+.footer__brand .wordmark{font-size:1.5rem;margin-bottom:var(--space-4)}
+.footer__slogan{
+  font-family:var(--font-cn);font-weight:500;font-size:1rem;
+  color:var(--freq-cream-50);max-width:30ch;line-height:1.5;
+}
+.footer__slogan .en-only{
+  font-family:var(--font-mono);font-weight:500;font-size:.75rem;
+  color:var(--freq-static-400);letter-spacing:.12em;text-transform:uppercase;
+  display:block;margin-top:8px;
+}
+.footer__bar{
+  border-top:1px solid var(--freq-ink-500);
+  padding:var(--space-5) 0;
+  display:flex;justify-content:space-between;flex-wrap:wrap;gap:var(--space-4);
+  font-family:var(--font-mono);font-weight:400;font-size:.6875rem;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--freq-static-400);
+}
+
+/* =========================================================
+   A11y · Reduced Motion
+   ========================================================= */
+@media (prefers-reduced-motion: reduce) {
+  .hero__mega .dot,
+  .spot-marker.is-active .pin,
+  .spots-map__head .live::before,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* =========================================================
+   Mobile tweaks
+   ========================================================= */
+@media (max-width:767px){
+  .section{padding:var(--space-8) 0}
+  .hero{padding-top:104px}
+  .hero__cta .btn{flex:1;min-width:180px}
+  .spots-map{position:static;aspect-ratio:auto;min-height:320px}
+}
+</style>
+</head>
+<body>
+
+<!-- ========== NAV ========== -->
+<header class="nav" id="nav" role="banner">
+  <div class="container nav__inner">
+    <a href="#top" class="wordmark" aria-label="FREQ. Home">FREQ<span class="dot">.</span></a>
+
+    <nav class="nav__menu" aria-label="Primary">
+      <a class="nav__link" href="#daily">Daily</a>
+      <a class="nav__link" href="#retail">Retail</a>
+      <a class="nav__link" href="#about">About</a>
+      <a class="nav__link" href="#spots">Spots</a>
+    </nav>
+
+    <div style="display:flex;align-items:center;gap:var(--space-3)">
+      <div class="lang-switch" role="group" aria-label="Language switch">
+        <button data-set-lang="en" aria-pressed="false">EN</button>
+        <button data-set-lang="zh" class="is-active" aria-pressed="true">中</button>
+      </div>
+      <button class="nav__hamburger" aria-label="Menu" aria-controls="mobileMenu" aria-expanded="false" id="hamburgerBtn">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+
+  <div class="mobile-menu" id="mobileMenu">
+    <a class="nav__link" href="#daily">Daily / 招牌</a>
+    <a class="nav__link" href="#retail">Retail / 零售</a>
+    <a class="nav__link" href="#about">About / 主张</a>
+    <a class="nav__link" href="#spots">Spots / 门店</a>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ========== SCREEN 1 · HERO ========== -->
+  <section class="hero" aria-label="Hero">
+    <div class="hero__inner">
+      <div class="hero__eyebrow">Tune in. Stay caffeinated.</div>
+
+      <h1 class="hero__mega">FREQ<span class="dot" aria-hidden="true">.</span></h1>
+
+      <p class="hero__sub">
+        <span class="zh-only">调到你这一频。</span>
+        <span class="en-only">Tune in to your frequency.</span>
+      </p>
+
+      <div class="hero__cta">
+        <a href="#spots" class="btn btn--primary">
+          <span class="zh-only">找门店</span><span class="en-only">Find a Spot</span>
+          <span aria-hidden="true">→</span>
+        </a>
+        <a href="#retail" class="btn btn--secondary">
+          <span class="zh-only">立即订购</span><span class="en-only">Order Now</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="hero__dial" aria-hidden="true">
+      <div class="hero__freq-readout">
+        <span>SIGNAL · NOW BROADCASTING</span>
+        <strong>FREQ <span class="freq-value">94.7</span> MHz</strong>
+        <span>EST. 2026 · SHANGHAI</span>
+      </div>
+      <div class="hero__dial-bar" id="dialBar"></div>
+    </div>
+
+  </section>
+
+  <!-- ========== SCREEN 2 · DAILY DOSE ========== -->
+  <section class="section section--dark" id="daily">
+    <div class="container">
+      <header class="section__head">
+        <span class="kicker">02 / Daily Lineup</span>
+        <h2 class="section__title">THE DAILY DOSE</h2>
+        <p class="section__title-cn">招牌饮品</p>
+        <p class="section__lead">
+          <span class="zh-only">门店每日现做的 6 款经典，从高频到低频，覆盖一整天的频段。</span>
+          <span class="en-only">Six daily classics, hand-crafted in store. From high-band to low-band, all day long.</span>
+        </p>
+      </header>
+
+      <div class="dose-grid">
+        <!-- Card 1 -->
+        <article class="cassette">
+          <div class="cassette__strip" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span class="peak"></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <div>
+            <h3 class="cassette__name">HIGH FREQ.<br>ESPRESSO</h3>
+            <p class="cassette__name-cn">高频意式</p>
+          </div>
+          <div class="cassette__meta">
+            <div class="row"><span class="label">Roast</span><span class="val">Light</span></div>
+            <div class="row"><span class="label">Notes</span><span class="val">Citrus · Stone Fruit</span></div>
+            <div class="row"><span class="label">Price</span><span class="val price">¥28</span></div>
+          </div>
+        </article>
+
+        <!-- Card 2 -->
+        <article class="cassette">
+          <div class="cassette__strip" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span class="peak"></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <div>
+            <h3 class="cassette__name">MID-WAVE<br>LATTE</h3>
+            <p class="cassette__name-cn">中波拿铁</p>
+          </div>
+          <div class="cassette__meta">
+            <div class="row"><span class="label">Roast</span><span class="val">Medium</span></div>
+            <div class="row"><span class="label">Notes</span><span class="val">Chocolate · Cream</span></div>
+            <div class="row"><span class="label">Price</span><span class="val price">¥32</span></div>
+          </div>
+        </article>
+
+        <!-- Card 3 -->
+        <article class="cassette">
+          <div class="cassette__strip" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span class="peak"></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <div>
+            <h3 class="cassette__name">LOW-BAND<br>DRIP</h3>
+            <p class="cassette__name-cn">低频手冲</p>
+          </div>
+          <div class="cassette__meta">
+            <div class="row"><span class="label">Roast</span><span class="val">Dark</span></div>
+            <div class="row"><span class="label">Notes</span><span class="val">Cocoa · Smoke</span></div>
+            <div class="row"><span class="label">Price</span><span class="val price">¥38</span></div>
+          </div>
+        </article>
+
+        <!-- Card 4 -->
+        <article class="cassette">
+          <div class="cassette__strip" aria-hidden="true">
+            <span></span><span></span><span class="peak"></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <div>
+            <h3 class="cassette__name">STATIC<br>COLD BREW</h3>
+            <p class="cassette__name-cn">静电冷萃</p>
+          </div>
+          <div class="cassette__meta">
+            <div class="row"><span class="label">Roast</span><span class="val">Cold Brew</span></div>
+            <div class="row"><span class="label">Notes</span><span class="val">Honey · Almond</span></div>
+            <div class="row"><span class="label">Price</span><span class="val price">¥34</span></div>
+          </div>
+        </article>
+
+        <!-- Card 5 -->
+        <article class="cassette">
+          <div class="cassette__strip" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+            <span></span><span class="peak"></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <div>
+            <h3 class="cassette__name">AM CHANNEL<br>FLAT WHITE</h3>
+            <p class="cassette__name-cn">调幅澳白</p>
+          </div>
+          <div class="cassette__meta">
+            <div class="row"><span class="label">Roast</span><span class="val">Medium</span></div>
+            <div class="row"><span class="label">Notes</span><span class="val">Caramel · Walnut</span></div>
+            <div class="row"><span class="label">Price</span><span class="val price">¥30</span></div>
+          </div>
+        </article>
+
+        <!-- Card 6 -->
+        <article class="cassette">
+          <div class="cassette__strip" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+            <span></span><span class="peak"></span><span></span><span></span><span></span><span></span>
+          </div>
+          <div>
+            <h3 class="cassette__name">NIGHT MODE<br>MOCHA</h3>
+            <p class="cassette__name-cn">夜频摩卡</p>
+          </div>
+          <div class="cassette__meta">
+            <div class="row"><span class="label">Roast</span><span class="val">Dark</span></div>
+            <div class="row"><span class="label">Notes</span><span class="val">Cacao · Vanilla</span></div>
+            <div class="row"><span class="label">Price</span><span class="val price">¥36</span></div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== SCREEN 3 · TAKE IT HOME ========== -->
+  <section class="section section--cream" id="retail">
+    <div class="container">
+      <header class="section__head">
+        <span class="kicker">03 / Retail Line</span>
+        <h2 class="section__title">TAKE IT HOME</h2>
+        <p class="section__title-cn">带回家</p>
+        <p class="section__lead">
+          <span class="zh-only">把整个频段带回家——挂耳、瓶装冷萃、整袋豆与卡带周边。</span>
+          <span class="en-only">Take the whole band home — drip packs, cold brew bottles, beans and cassette merch.</span>
+        </p>
+      </header>
+
+      <div class="retail-grid">
+        <article class="retail-card">
+          <div class="retail-card__shot">
+            <img
+              src="./images/retail-drip.png"
+              alt="FREQ. drip pack in kraft paper, printed HIGH FREQ 94.7 MHz / FREQ. 牛皮纸挂耳袋，印刷 HIGH FREQ 94.7 MHz"
+              width="1024" height="1024"
+              loading="lazy" decoding="async"
+            />
+          </div>
+          <div class="retail-card__body">
+            <span class="retail-card__index">SKU · 01</span>
+            <h3 class="retail-card__name">DRIP PACKS</h3>
+            <p class="retail-card__name-cn zh-only">挂耳系列</p>
+            <p class="retail-card__desc">
+              <span class="zh-only">6 频段口味组合一盒装，单包独立锁鲜，从高频明亮到低频厚重一次集齐。</span>
+              <span class="en-only">Six bands in one box. Individually sealed, from bright high-band to deep low-band.</span>
+            </p>
+            <div class="retail-card__foot">
+              <span class="retail-card__price">FROM ¥98</span>
+              <a href="#" class="btn--ghost dark">
+                <span class="zh-only">查看全部</span><span class="en-only">Explore</span>
+                <span aria-hidden="true">→</span>
+              </a>
+            </div>
+          </div>
+        </article>
+
+        <article class="retail-card">
+          <div class="retail-card__shot">
+            <img
+              src="./images/retail-coldbrew.png"
+              alt="FREQ. cold brew glass bottle with electric green label STATIC COLD BREW 88.5 MHz / FREQ. 玻璃瓶冷萃，电光绿标签 STATIC COLD BREW 88.5 MHz"
+              width="1024" height="1024"
+              loading="lazy" decoding="async"
+            />
+          </div>
+          <div class="retail-card__body">
+            <span class="retail-card__index">SKU · 02</span>
+            <h3 class="retail-card__name">COLD BREW BOTTLES</h3>
+            <p class="retail-card__name-cn zh-only">冷萃瓶装</p>
+            <p class="retail-card__desc">
+              <span class="zh-only">单一产区限定瓶装冷萃，250ml 玻璃瓶，冷链直达，48 小时内最佳风味。</span>
+              <span class="en-only">Single-origin cold brew, 250ml glass bottle, cold-chain delivered for peak flavor.</span>
+            </p>
+            <div class="retail-card__foot">
+              <span class="retail-card__price">¥48 / BOTTLE</span>
+              <a href="#" class="btn--ghost dark">
+                <span class="zh-only">查看全部</span><span class="en-only">Explore</span>
+                <span aria-hidden="true">→</span>
+              </a>
+            </div>
+          </div>
+        </article>
+
+        <article class="retail-card">
+          <div class="retail-card__shot">
+            <img
+              src="./images/retail-beans.png"
+              alt="FREQ. matte black bean bag, cream foil-stamped FREQ / SINGLE ORIGIN / 101.3 MHz / FREQ. 哑光黑咖啡豆袋，米色烫金字 FREQ / SINGLE ORIGIN / 101.3 MHz"
+              width="1024" height="1024"
+              loading="lazy" decoding="async"
+            />
+          </div>
+          <div class="retail-card__body">
+            <span class="retail-card__index">SKU · 03</span>
+            <h3 class="retail-card__name">SINGLE ORIGIN BEANS</h3>
+            <p class="retail-card__name-cn zh-only">精选豆单</p>
+            <p class="retail-card__desc">
+              <span class="zh-only">200g 整袋豆单，每袋附烘焙日期与频段标签，浅烘高频到深烘低频。</span>
+              <span class="en-only">200g bagged beans with roast date and band label, from light high-band to dark low-band.</span>
+            </p>
+            <div class="retail-card__foot">
+              <span class="retail-card__price">FROM ¥128</span>
+              <a href="#" class="btn--ghost dark">
+                <span class="zh-only">查看全部</span><span class="en-only">Explore</span>
+                <span aria-hidden="true">→</span>
+              </a>
+            </div>
+          </div>
+        </article>
+
+        <article class="retail-card">
+          <div class="retail-card__shot">
+            <img
+              src="./images/retail-cassette.png"
+              alt="FREQ. cassette MIXTAPE Vol.1 with enamel mug and kraft gift box / FREQ. 卡带 MIXTAPE Vol.1、搪瓷咖啡杯与牛皮纸礼盒"
+              width="1024" height="1024"
+              loading="lazy" decoding="async"
+            />
+          </div>
+          <div class="retail-card__body">
+            <span class="retail-card__index">SKU · 04</span>
+            <h3 class="retail-card__name">CASSETTE MERCH</h3>
+            <p class="retail-card__name-cn zh-only">卡带周边</p>
+            <p class="retail-card__desc">
+              <span class="zh-only">陶瓷杯、印花 T、帆布袋。把上世纪卡带美学拆开，重组成日常物件。</span>
+              <span class="en-only">Mugs, tees and totes. Last century's cassette aesthetic, rebuilt for everyday use.</span>
+            </p>
+            <div class="retail-card__foot">
+              <span class="retail-card__price">FROM ¥68</span>
+              <a href="#" class="btn--ghost dark">
+                <span class="zh-only">查看全部</span><span class="en-only">Explore</span>
+                <span aria-hidden="true">→</span>
+              </a>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== SCREEN 4 · THE FIX ========== -->
+  <section class="section section--dark" id="about">
+    <div class="container">
+      <header class="section__head">
+        <span class="kicker">04 / Manifesto</span>
+        <h2 class="section__title">THE FIX</h2>
+        <p class="section__title-cn">品牌主张</p>
+      </header>
+
+      <div class="fix-grid">
+        <div class="manifesto">
+          <div class="manifesto__switch" role="group" aria-label="Manifesto language">
+            <button data-mani-lang="zh" class="is-active" aria-pressed="true">中</button>
+            <button data-mani-lang="en" aria-pressed="false">EN</button>
+          </div>
+
+          <p class="manifesto__body zh" id="maniZh">
+            频率从来不是一个固定的数字。它是早晨第一杯醒脑的高频，也是深夜独处时的低频。它是地铁里耳机里的中波，也是周末散步时的静电。FREQ. 不教你"正确的咖啡"，我们让你听见自己今天该喝的那一频。复古不是怀旧——是把上世纪工业美学拆开，重组成此刻的潮流语言。<strong style="color:var(--freq-signal-500);font-weight:400">调到你这一频。</strong>
+          </p>
+
+          <p class="manifesto__body en" id="maniEn" hidden>
+            A frequency was never a fixed number. It's the high band of your first morning sip, and the low band of a quiet midnight. It's the AM in your subway commute, the static in your weekend walk. FREQ. doesn't teach you "the right coffee" — we help you hear the one you need today. Retro isn't nostalgia. It's the industrial aesthetic of the last century, taken apart and rebuilt for now. <strong style="color:var(--freq-signal-500);font-weight:500">Tune in to your frequency.</strong>
+          </p>
+        </div>
+
+        <div class="fix-stats">
+          <div class="stat">
+            <span class="stat__num">3</span>
+            <span class="stat__label"><span class="val">CITIES</span> · <span class="zh-only">进驻城市</span><span class="en-only">Cities</span></span>
+            <span class="stat__desc">
+              <span class="zh-only">上海 · 深圳 · 杭州 · 成都即将到达</span>
+              <span class="en-only">Shanghai · Shenzhen · Hangzhou · Chengdu inbound</span>
+            </span>
+          </div>
+          <div class="stat">
+            <span class="stat__num">12</span>
+            <span class="stat__label"><span class="val">SPOTS</span> · <span class="zh-only">门店数量</span><span class="en-only">Spots</span></span>
+            <span class="stat__desc">
+              <span class="zh-only">每家门店一组独立频率编号</span>
+              <span class="en-only">Each spot tuned to its own frequency</span>
+            </span>
+          </div>
+          <div class="stat">
+            <span class="stat__num">47</span>
+            <span class="stat__label"><span class="val">ORIGINS</span> · <span class="zh-only">合作产区</span><span class="en-only">Origins</span></span>
+            <span class="stat__desc">
+              <span class="zh-only">埃塞俄比亚到云南，全频段产区直采</span>
+              <span class="en-only">From Ethiopia to Yunnan, all bands sourced direct</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== SCREEN 5 · OUR SPOTS ========== -->
+  <section class="section section--dark" id="spots" style="padding-top:0">
+    <div class="container">
+      <header class="section__head">
+        <span class="kicker">05 / Locations</span>
+        <h2 class="section__title">OUR SPOTS</h2>
+        <p class="section__title-cn">门店</p>
+        <p class="section__lead">
+          <span class="zh-only">每家门店都是一台独立的收音机。选一个频率，去那里。</span>
+          <span class="en-only">Each spot is its own radio. Pick a frequency and go.</span>
+        </p>
+      </header>
+
+      <div class="spots-filter" role="tablist" aria-label="City filter">
+        <button class="chip is-active" data-city="all">All</button>
+        <button class="chip" data-city="shanghai">Shanghai</button>
+        <button class="chip" data-city="shenzhen">Shenzhen</button>
+        <button class="chip" data-city="hangzhou">Hangzhou</button>
+        <button class="chip" data-city="chengdu">Chengdu</button>
+      </div>
+
+      <div class="spots-grid">
+        <div class="spots-list" id="spotsList">
+          <!-- Spot 1 -->
+          <article class="spot" data-city="shanghai" data-spot="001">
+            <span class="spot__index">#001</span>
+            <div>
+              <h3 class="spot__name">FREQ. Xuhui Spot</h3>
+              <p class="spot__name-cn">上海徐汇 · 永嘉路</p>
+              <p class="spot__addr">
+                <span class="zh-only">上海市徐汇区永嘉路 218 号</span>
+                <span class="en-only">218 Yongjia Rd, Xuhui, Shanghai</span>
+                <span class="en">218 Yongjia Rd, Xuhui, SH</span>
+              </p>
+            </div>
+            <span class="spot__freq">94.7</span>
+          </article>
+
+          <!-- Spot 2 -->
+          <article class="spot" data-city="shenzhen" data-spot="002">
+            <span class="spot__index">#002</span>
+            <div>
+              <h3 class="spot__name">FREQ. Nanshan Spot</h3>
+              <p class="spot__name-cn">深圳南山 · 科技园南区</p>
+              <p class="spot__addr">
+                <span class="zh-only">深圳市南山区科技园南区 8 栋</span>
+                <span class="en-only">Bldg 8, Tech Park South, Nanshan, Shenzhen</span>
+                <span class="en">Bldg 8, Tech Park South, SZ</span>
+              </p>
+            </div>
+            <span class="spot__freq">101.3</span>
+          </article>
+
+          <!-- Spot 3 -->
+          <article class="spot" data-city="hangzhou" data-spot="003">
+            <span class="spot__index">#003</span>
+            <div>
+              <h3 class="spot__name">FREQ. Tianmuli Spot</h3>
+              <p class="spot__name-cn">杭州西湖 · 天目里</p>
+              <p class="spot__addr">
+                <span class="zh-only">杭州市西湖区天目山路 398 号</span>
+                <span class="en-only">398 Tianmushan Rd, Xihu, Hangzhou</span>
+                <span class="en">398 Tianmushan Rd, Xihu, HZ</span>
+              </p>
+            </div>
+            <span class="spot__freq">88.5</span>
+          </article>
+
+          <!-- Spot 4 -->
+          <article class="spot" data-city="chengdu" data-spot="004">
+            <span class="spot__index">#004</span>
+            <div>
+              <h3 class="spot__name">FREQ. Sino-Ocean Spot</h3>
+              <p class="spot__name-cn">成都锦江 · 太古里</p>
+              <p class="spot__addr">
+                <span class="zh-only">成都市锦江区中纱帽街 8 号</span>
+                <span class="en-only">8 Zhongshamao St, Jinjiang, Chengdu</span>
+                <span class="en">8 Zhongshamao St, Jinjiang, CD</span>
+              </p>
+            </div>
+            <span class="spot__freq">97.9</span>
+          </article>
+        </div>
+
+        <aside class="spots-map" aria-label="Map">
+          <div class="spots-map__head">
+            <span>SIGNAL MAP / CHINA</span>
+            <span class="live">LIVE</span>
+          </div>
+          <svg viewBox="0 0 400 380" role="img" aria-label="Abstract map of China with FREQ spots">
+            <defs>
+              <pattern id="mapGrid" width="20" height="20" patternUnits="userSpaceOnUse">
+                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#4A3F8C" stroke-width="0.5" opacity="0.4"/>
+              </pattern>
+            </defs>
+            <!-- grid background -->
+            <rect width="400" height="380" fill="url(#mapGrid)"/>
+
+            <!-- Abstract China outline (simplified) -->
+            <path d="M 60 90
+                     C 80 70, 110 60, 140 65
+                     L 180 55
+                     C 220 50, 260 55, 290 70
+                     L 330 85
+                     C 350 100, 360 130, 355 160
+                     L 350 200
+                     C 345 230, 330 255, 305 275
+                     L 280 295
+                     C 250 315, 215 320, 185 310
+                     L 155 305
+                     C 130 300, 105 285, 90 260
+                     L 75 230
+                     C 60 200, 55 165, 60 130 Z"
+                  fill="none" stroke="#F2E8D5" stroke-width="1.2" opacity="0.55" stroke-linejoin="miter"/>
+
+            <!-- inner dashed land -->
+            <path d="M 100 130 L 280 120 L 310 220 L 130 250 Z"
+                  fill="none" stroke="#4A3F8C" stroke-width="0.8" stroke-dasharray="3 3" opacity="0.6"/>
+
+            <!-- Spot markers -->
+            <!-- Shanghai 94.7 — east -->
+            <g class="spot-marker" data-spot="001" transform="translate(295, 175)">
+              <circle class="ring" r="14"/>
+              <circle class="ring" r="22" opacity="0.25"/>
+              <circle class="pin" r="5"/>
+              <text x="14" y="-8" font-family="JetBrains Mono" font-size="10" fill="#F2E8D5" letter-spacing="0.5">#001 · 94.7</text>
+            </g>
+            <!-- Shenzhen 101.3 — south -->
+            <g class="spot-marker" data-spot="002" transform="translate(245, 280)">
+              <circle class="ring" r="14"/>
+              <circle class="ring" r="22" opacity="0.25"/>
+              <circle class="pin" r="5"/>
+              <text x="14" y="6" font-family="JetBrains Mono" font-size="10" fill="#F2E8D5" letter-spacing="0.5">#002 · 101.3</text>
+            </g>
+            <!-- Hangzhou 88.5 — east -->
+            <g class="spot-marker" data-spot="003" transform="translate(280, 200)">
+              <circle class="ring" r="14"/>
+              <circle class="ring" r="22" opacity="0.25"/>
+              <circle class="pin" r="5"/>
+              <text x="14" y="20" font-family="JetBrains Mono" font-size="10" fill="#F2E8D5" letter-spacing="0.5">#003 · 88.5</text>
+            </g>
+            <!-- Chengdu 97.9 — west -->
+            <g class="spot-marker" data-spot="004" transform="translate(175, 195)">
+              <circle class="ring" r="14"/>
+              <circle class="ring" r="22" opacity="0.25"/>
+              <circle class="pin" r="5"/>
+              <text x="-72" y="-8" font-family="JetBrains Mono" font-size="10" fill="#F2E8D5" letter-spacing="0.5">#004 · 97.9</text>
+            </g>
+
+            <!-- Compass / corner mark -->
+            <g transform="translate(30, 30)" font-family="JetBrains Mono" font-size="9" fill="#8B82A8" letter-spacing="1">
+              <text>N ↑</text>
+            </g>
+            <g transform="translate(330, 360)" font-family="JetBrains Mono" font-size="9" fill="#8B82A8" letter-spacing="1">
+              <text>SCALE — 1 : ∞</text>
+            </g>
+          </svg>
+        </aside>
+      </div>
+
+      <div class="spots-cta">
+        <a href="#" class="btn btn--primary">
+          <span class="zh-only">找最近的门店</span><span class="en-only">Find the Nearest Spot</span>
+          <span aria-hidden="true">→</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== SCREEN 6 · STAY TUNED + FOOTER ========== -->
+  <section class="section section--void" id="contact">
+    <div class="container">
+      <header class="section__head">
+        <span class="kicker">06 / Stay Tuned</span>
+        <h2 class="section__title">STAY TUNED</h2>
+        <p class="section__title-cn">持续在线</p>
+      </header>
+
+      <div class="tune__inner">
+        <p class="tune__hook">
+          <span class="zh-only">新品频率第一时间通知。<br>限定豆单、季节饮品、门店开业。</span>
+          <span class="en-only">Be the first to know our new frequencies.<br>Limited beans, seasonal drinks, new spots.</span>
+        </p>
+
+        <form class="tune__form" id="tuneForm" novalidate>
+          <div class="tune__field">
+            <label class="tune__label" for="email">
+              <span class="zh-only">邮箱</span><span class="en-only">Email</span>
+            </label>
+            <input class="tune__input" type="email" id="email" name="email" placeholder="your@email.com" required autocomplete="email"/>
+          </div>
+          <button class="btn btn--primary" type="submit">
+            <span class="zh-only">订阅</span><span class="en-only">Tune In</span>
+            <span aria-hidden="true">→</span>
+          </button>
+        </form>
+      </div>
+
+      <div class="social" aria-label="Social">
+        <a href="#" target="_blank" rel="noopener">Instagram</a>
+        <a href="#" target="_blank" rel="noopener">小红书 / XHS</a>
+        <a href="#" target="_blank" rel="noopener">抖音 / Douyin</a>
+        <a href="#" target="_blank" rel="noopener">微博 / Weibo</a>
+      </div>
+
+      <footer class="footer">
+        <div class="footer__grid">
+          <div class="footer__col footer__brand">
+            <a href="#top" class="wordmark">FREQ<span class="dot">.</span></a>
+            <p class="footer__slogan">
+              <span class="zh-only">调到你这一频。</span>
+              <span class="en-only">Tune in to your frequency.</span>
+              <span class="bilingual" style="display:block;font-family:var(--font-mono);font-weight:500;font-size:.75rem;color:var(--freq-static-400);letter-spacing:.12em;text-transform:uppercase;margin-top:8px">Tune in. Stay caffeinated.</span>
+            </p>
+          </div>
+
+          <div class="footer__col">
+            <h4>Daily</h4>
+            <ul>
+              <li><a href="#daily"><span class="zh-only">招牌饮品</span><span class="en-only">Classics</span></a></li>
+              <li><a href="#"><span class="zh-only">季节限定</span><span class="en-only">Seasonal</span></a></li>
+              <li><a href="#"><span class="zh-only">风味地图</span><span class="en-only">Flavor Map</span></a></li>
+            </ul>
+          </div>
+
+          <div class="footer__col">
+            <h4>Retail</h4>
+            <ul>
+              <li><a href="#"><span class="zh-only">挂耳</span><span class="en-only">Drip Packs</span></a></li>
+              <li><a href="#"><span class="zh-only">冷萃</span><span class="en-only">Cold Brew</span></a></li>
+              <li><a href="#"><span class="zh-only">咖啡豆</span><span class="en-only">Beans</span></a></li>
+              <li><a href="#"><span class="zh-only">周边</span><span class="en-only">Merch</span></a></li>
+            </ul>
+          </div>
+
+          <div class="footer__col">
+            <h4>Company</h4>
+            <ul>
+              <li><a href="#about"><span class="zh-only">关于 FREQ.</span><span class="en-only">About FREQ.</span></a></li>
+              <li><a href="#spots"><span class="zh-only">门店</span><span class="en-only">Spots</span></a></li>
+              <li><a href="#"><span class="zh-only">招聘</span><span class="en-only">Careers</span></a></li>
+              <li><a href="#"><span class="zh-only">联系</span><span class="en-only">Contact</span></a></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="footer__bar">
+          <span>© 2026 FREQ. Coffee · All frequencies reserved.</span>
+          <span>
+            <span class="zh-only">沪 ICP 备 2026xxxxx 号</span>
+            <span class="en-only">ICP License · N/A</span>
+          </span>
+        </div>
+      </footer>
+    </div>
+  </section>
+
+</main>
+
+<script>
+/* =========================================================
+   FREQ. — Interactions
+   ========================================================= */
+(function(){
+  'use strict';
+
+  // -------- Hero dial bar ----------
+  const dial = document.getElementById('dialBar');
+  if (dial){
+    const total = 24;
+    // pointer at column index 11 (≈ 94.7 marker)
+    const pointer = 11;
+    let html = '';
+    for (let i=0;i<total;i++){
+      let cls = '';
+      if (i % 4 === 0) cls = 'major';
+      if (i === pointer) cls = 'major';
+      else if (i === pointer-1 || i === pointer+1) cls = 'peak';
+      html += `<span class="${cls}"></span>`;
+    }
+    dial.innerHTML = html;
+  }
+
+  // -------- Nav scroll state ----------
+  const nav = document.getElementById('nav');
+  const onScroll = () => {
+    if (window.scrollY > 80) nav.classList.add('is-scrolled');
+    else nav.classList.remove('is-scrolled');
+  };
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+
+  // -------- Hamburger / mobile menu ----------
+  const hamburger = document.getElementById('hamburgerBtn');
+  const mobileMenu = document.getElementById('mobileMenu');
+  if (hamburger && mobileMenu){
+    hamburger.addEventListener('click', () => {
+      const open = nav.classList.toggle('is-open');
+      mobileMenu.classList.toggle('is-open', open);
+      hamburger.setAttribute('aria-expanded', open ? 'true' : 'false');
+      document.body.style.overflow = open ? 'hidden' : '';
+    });
+    mobileMenu.querySelectorAll('a').forEach(a => {
+      a.addEventListener('click', () => {
+        nav.classList.remove('is-open');
+        mobileMenu.classList.remove('is-open');
+        hamburger.setAttribute('aria-expanded', 'false');
+        document.body.style.overflow = '';
+      });
+    });
+  }
+
+  // -------- Global Language Switcher ----------
+  const root = document.documentElement;
+  const langButtons = document.querySelectorAll('[data-set-lang]');
+  langButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const lang = btn.getAttribute('data-set-lang');
+      root.setAttribute('data-lang', lang);
+      langButtons.forEach(b => {
+        const active = b.getAttribute('data-set-lang') === lang;
+        b.classList.toggle('is-active', active);
+        b.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
+      // update <html lang>
+      root.setAttribute('lang', lang === 'en' ? 'en' : 'zh-CN');
+    });
+  });
+
+  // -------- Manifesto Local Switcher ----------
+  const maniButtons = document.querySelectorAll('[data-mani-lang]');
+  const maniZh = document.getElementById('maniZh');
+  const maniEn = document.getElementById('maniEn');
+  maniButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const lang = btn.getAttribute('data-mani-lang');
+      maniButtons.forEach(b => {
+        const active = b.getAttribute('data-mani-lang') === lang;
+        b.classList.toggle('is-active', active);
+        b.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
+      if (lang === 'zh'){
+        maniZh.hidden = false; maniEn.hidden = true;
+      } else {
+        maniZh.hidden = true; maniEn.hidden = false;
+      }
+    });
+  });
+
+  // -------- City filter ----------
+  const chips = document.querySelectorAll('.chip[data-city]');
+  const spots = document.querySelectorAll('.spot[data-city]');
+  const markers = document.querySelectorAll('.spot-marker');
+  chips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      const city = chip.getAttribute('data-city');
+      chips.forEach(c => c.classList.toggle('is-active', c === chip));
+      spots.forEach(s => {
+        const match = city === 'all' || s.getAttribute('data-city') === city;
+        s.style.display = match ? '' : 'none';
+      });
+      markers.forEach(m => {
+        const id = m.getAttribute('data-spot');
+        const matched = (city === 'all') || (
+          document.querySelector(`.spot[data-spot="${id}"][data-city="${city}"]`) !== null
+        );
+        m.style.opacity = matched ? '1' : '0.2';
+      });
+    });
+  });
+
+  // -------- Spot list <-> map hover sync ----------
+  const allSpotItems = document.querySelectorAll('.spot');
+  allSpotItems.forEach(item => {
+    const id = item.getAttribute('data-spot');
+    const marker = document.querySelector(`.spot-marker[data-spot="${id}"]`);
+    if (!marker) return;
+    item.addEventListener('mouseenter', () => marker.classList.add('is-active'));
+    item.addEventListener('mouseleave', () => marker.classList.remove('is-active'));
+    item.addEventListener('focusin', () => marker.classList.add('is-active'));
+    item.addEventListener('focusout', () => marker.classList.remove('is-active'));
+  });
+
+  // -------- Newsletter form ----------
+  const tuneForm = document.getElementById('tuneForm');
+  if (tuneForm){
+    tuneForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const input = tuneForm.querySelector('input[type=email]');
+      if (!input.value || !/.+@.+\..+/.test(input.value)){
+        input.style.borderBottomColor = 'var(--freq-coral-500)';
+        input.focus();
+        return;
+      }
+      const btn = tuneForm.querySelector('button');
+      const orig = btn.innerHTML;
+      btn.innerHTML = '✓ TUNED IN';
+      btn.disabled = true;
+      input.value = '';
+      setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 2400);
+    });
+  }
+})();
+</script>
+
+</body>
+</html>
