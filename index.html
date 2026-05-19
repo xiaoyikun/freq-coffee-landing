@@ -1828,6 +1828,9 @@ html[data-lang="en"] .zh-only{display:none !important}
     // ---- State (render)
     const smoothBuf = new Float32Array(SAMPLE_COUNT);   // last drawn -1..1 values, smoothed
     let phase = 0;               // running phase so the wave scrolls instead of standing still
+    let phaseH1 = 1.7;           // harmonic-1 phase (1.5× freq) — independent drift
+    let phaseH2 = 4.2;           // harmonic-2 phase (3× freq) — independent drift
+    let breathPhase = 0;         // slow modulation phase for organic amplitude breathing
     let rafId = 0;
     let lastFrameAt = 0;
 
@@ -2006,17 +2009,36 @@ html[data-lang="en"] .zh-only{display:none !important}
       }
       const liveAmp = liveAmpRaw * (1 - decayFactor);
 
-      // Phase advances every frame so the wave scrolls horizontally.
-      // Tie scroll rate to the spring-tracked frequency, not the raw target,
-      // so scroll speed also has inertia (no abrupt scroll jumps).
-      phase += 0.02 + 0.0015 * liveFreq;
+      // Advance phases independently so the three harmonic layers slowly drift
+      // out of sync with each other — the waveform never repeats identically.
+      // Slightly irrational ratios (not exact 2× or 3×) prevent visible "beat" lock-in.
+      phase   += 0.020 + 0.0015 * liveFreq;
+      phaseH1 += 0.013 + 0.0011 * liveFreq;  // slower drift on 1.5× harmonic
+      phaseH2 += 0.029 + 0.0007 * liveFreq;  // faster drift on 3× harmonic
+      breathPhase += 0.012;                   // ~0.2 Hz "breathing" envelope
+
+      // Organic amplitude breathing: 2-layer slow sine ≈ pseudo-Perlin.
+      // Modulates global amplitude by ±12% so even a "flat hold" subtly swells.
+      const breath = 1 + 0.12 * (
+        Math.sin(breathPhase) * 0.6 +
+        Math.sin(breathPhase * 1.7 + 0.9) * 0.4
+      );
+      const ampWithBreath = liveAmp * breath;
 
       const TWO_PI = Math.PI * 2;
       for (let i = 0; i < SAMPLE_COUNT; i++){
         const t = i / SAMPLE_COUNT;
-        const baseWave  = Math.sin(t * TWO_PI * liveFreq + phase);
-        const noiseLayer = (Math.random() - 0.5) * liveJit;
-        const target = baseWave * liveAmp + noiseLayer * (1 - decayFactor);
+        // Three-harmonic stack — fundamental + 1.5× (sub) + 3× (overtone).
+        // Weights 1.0 / 0.35 / 0.18 so fundamental still dominates, sum normalized to ~1.
+        const w0 = Math.sin(t * TWO_PI * liveFreq        + phase);
+        const w1 = Math.sin(t * TWO_PI * liveFreq * 1.5  + phaseH1) * 0.35;
+        const w2 = Math.sin(t * TWO_PI * liveFreq * 3.0  + phaseH2) * 0.18;
+        const composite = (w0 + w1 + w2) * 0.65;  // normalize so peak ≈ ±1
+
+        // White noise reduced to 1/3 — let harmonics and breathing carry "naturalness"
+        const noiseLayer = (Math.random() - 0.5) * liveJit * 0.33;
+
+        const target = composite * ampWithBreath + noiseLayer * (1 - decayFactor);
         smoothBuf[i] = smoothBuf[i] * (1 - LERP) + target * LERP;
       }
       return { liveAmp, decayFactor };
