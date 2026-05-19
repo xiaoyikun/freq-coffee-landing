@@ -369,76 +369,6 @@ html[data-lang="en"] .zh-only{display:none !important}
 }
 .hero__dial-hint.is-hidden{opacity:0;pointer-events:none}
 
-/* Listen Mode — mic-driven tuner */
-.hero__listen-group{
-  display:inline-flex;align-items:center;gap:var(--space-3);
-  flex-wrap:nowrap;
-}
-.hero__listen-btn{
-  display:inline-flex;align-items:center;gap:var(--space-2);
-  height:32px;padding:0 var(--space-4);
-  font-family:var(--font-mono);font-weight:500;font-size:.6875rem;
-  letter-spacing:.1em;text-transform:uppercase;
-  color:var(--freq-static-400);
-  background:transparent;
-  border:1px solid var(--freq-static-400);
-  border-radius:0;
-  cursor:pointer;
-  white-space:nowrap;
-  transition:color .2s var(--ease-warp), border-color .2s var(--ease-warp), background-color .2s var(--ease-warp);
-}
-.hero__listen-btn:hover{
-  color:var(--freq-cream-50);
-  border-color:var(--freq-cream-50);
-}
-.hero__listen-btn[data-state="listening"],
-.hero__listen-btn[data-state="listening"]:hover{
-  color:var(--freq-signal-500);
-  border-color:var(--freq-signal-500);
-  /* 故意不发光：留预算给音量表 */
-}
-.hero__listen-btn[data-state="error"],
-.hero__listen-btn[data-state="error"]:hover{
-  color:var(--freq-coral-500);
-  border-color:var(--freq-coral-500);
-  cursor:not-allowed;
-}
-.hero__listen-dot{
-  display:none;
-  width:6px;height:6px;border-radius:50%;
-  background:var(--freq-signal-500);
-}
-.hero__listen-btn[data-state="listening"] .hero__listen-dot{
-  display:inline-block;
-  animation:listen-blink 1.1s ease-in-out infinite;
-}
-@keyframes listen-blink{
-  0%,100%{opacity:1}
-  50%{opacity:.25}
-}
-.hero__vu-meter{
-  display:inline-flex;align-items:center;gap:4px;
-  height:14px;
-}
-.hero__vu-meter[hidden]{display:none}
-.hero__vu-meter span{
-  display:block;width:8px;height:14px;
-  background:var(--freq-ink-500);
-  transition:background-color .12s var(--ease-warp), box-shadow .12s var(--ease-warp);
-}
-.hero__vu-meter.vu-on-1 span:nth-child(-n+1),
-.hero__vu-meter.vu-on-2 span:nth-child(-n+2),
-.hero__vu-meter.vu-on-3 span:nth-child(-n+3),
-.hero__vu-meter.vu-on-4 span:nth-child(-n+4),
-.hero__vu-meter.vu-on-5 span:nth-child(-n+5){
-  background:var(--freq-signal-500);
-  box-shadow:0 0 8px var(--freq-signal-500);
-}
-@media (prefers-reduced-motion: reduce){
-  .hero__vu-meter span{box-shadow:none !important}
-  .hero__listen-dot{animation:none !important}
-}
-
 /* Hero · Oscilloscope canvas — full-bleed waveform between mega + dial */
 .hero__scope{
   position:relative;
@@ -450,10 +380,8 @@ html[data-lang="en"] .zh-only{display:none !important}
   margin:var(--space-7) 0;
   z-index:1; /* below mega text */
   pointer-events:none;
-  opacity:0;
-  transition:opacity .45s var(--ease-warp);
+  opacity:.7;          /* 默认显示，不抢 mega 字焦点 */
 }
-.hero__scope.is-on{opacity:1}
 @media (max-width:767px){
   .hero__scope{height:60px;margin:var(--space-6) 0}
 }
@@ -1003,34 +931,6 @@ html[data-lang="en"] .zh-only{display:none !important}
           <span class="zh-only">中烘 · 焦糖、奶油、平衡</span>
           <span class="en-only">Medium roast · caramel, cream, balanced</span>
         </p>
-        <div class="hero__listen-group">
-          <div
-            class="hero__vu-meter vu-on-0"
-            id="vuMeter"
-            role="meter"
-            aria-label="Microphone input level"
-            aria-valuemin="0"
-            aria-valuemax="5"
-            aria-valuenow="0"
-            hidden
-          >
-            <span></span><span></span><span></span><span></span><span></span>
-          </div>
-          <button
-            type="button"
-            class="hero__listen-btn"
-            id="listenBtn"
-            aria-label="Toggle microphone-driven frequency tuner"
-            aria-pressed="false"
-            data-state="idle"
-          >
-            <span class="hero__listen-btn-label">
-              <span class="zh-only">🎙 显示声波</span>
-              <span class="en-only">🎙 SHOW WAVEFORM</span>
-            </span>
-            <span class="hero__listen-dot" aria-hidden="true"></span>
-          </button>
-        </div>
         <p class="hero__dial-hint" id="dialHint">
           <span class="zh-only">← 拖动调频 →</span>
           <span class="en-only">← DRAG TO TUNE →</span>
@@ -1735,8 +1635,7 @@ html[data-lang="en"] .zh-only{display:none !important}
       dial.setAttribute('aria-valuetext', rounded.toFixed(1) + ' MHz');
       renderDial(rounded, { pulse: !!opts.pulse });
       setFlavor(rounded);
-      // 让位机制：非 listen 调用（用户拖拽 / 键盘）戳一下时间戳，
-      // listenMode 检测到后会暂停一秒不接管
+      // 用户拖拽 / 键盘交互戳一下时间戳，预留给未来需要让位的外部驱动
       if (!opts.fromListen){
         window.__freqDial && (window.__freqDial.lastUserInteractionAt = performance.now());
       }
@@ -1871,7 +1770,7 @@ html[data-lang="en"] .zh-only{display:none !important}
     // ---- Init ----
     setFreq(94.7);
 
-    // ---- Expose to listenMode (mic-driven tuner) ----
+    // ---- Public bridge (kept for future external drivers; mouse scope does not use it) ----
     window.__freqDial = {
       setFreq: setFreq,
       getFreq: () => currentFreq,
@@ -1882,52 +1781,57 @@ html[data-lang="en"] .zh-only{display:none !important}
   }
   // -------- /Hero dial bar ----------
 
-  // -------- Listen Mode — mic-driven oscilloscope (waveform visualizer) ----------
-  // Visualizes the user's voice as a real-time time-domain waveform across the hero.
-  // Does NOT control the dial-bar — it is a pure visual feedback layer.
-  // The window.__freqDial bridge is preserved for future extensions but unused here.
-  (function listenMode(){
-    const btn    = document.getElementById('listenBtn');
-    const vu     = document.getElementById('vuMeter');
+  // -------- Mouse Scope — mouse-driven oscilloscope (waveform visualizer) ----------
+  // Renders a real-time time-domain waveform whose frequency / amplitude / jitter
+  // are driven by the cursor position and motion speed. Pure visual layer —
+  // does NOT control the dial-bar.
+  //
+  //   mouseX (0..1) → frequency  (2 cycles  → 30 cycles)
+  //   mouseY (0..1) → amplitude  (top=excited / bottom=calm; Y inverted)
+  //   speed         → jitter     (faster = noisier)
+  //   idle ms       → decay      (1500ms grace, 3000ms = fully flat)
+  (function mouseScope(){
     const canvas = document.getElementById('heroScope');
-    if (!btn || !vu || !canvas) return;
+    if (!canvas) return;
 
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const ctx2d = canvas.getContext('2d');
 
-    // ---- State
-    let active = false;
-    let audioCtx = null;
-    let analyser = null;
-    let micStream = null;
-    let sourceNode = null;
-    let rafId = 0;
-    let vuTimerId = 0;
-    let timeData = null;        // Uint8Array buffer (analyser.fftSize)
-    let smoothBuf = null;       // Float32Array, smoothed time-domain data for lerp
-    let latestRms = 0;
-    let lastSoundAt = 0;        // when RMS last crossed threshold
-    let isIdleSilent = false;   // sub-state inside listening: silent ≥200ms → thin line, no glow
-    let lastFrameAt = 0;        // for reduced-motion 30fps throttle
-    let fadeStartAt = 0;        // for canvas fade-out on stop
-    let fadeRafId = 0;
-
-    // ---- Constants
-    const SILENCE_RMS = 0.02;
-    const SILENCE_GRACE_MS = 200;     // RMS<thresh for ≥200ms → idle silent
-    const SAMPLE_COUNT = 1024;        // points drawn per frame (subsampled from fftSize=2048)
-    const LERP = reduceMotion ? 1.0 : 0.3;  // 1.0 = no smoothing
-    const TARGET_FPS = reduceMotion ? 30 : 60;
-    const FRAME_MIN_MS = 1000 / TARGET_FPS;
-    const FADE_MS = 500;
-
-    // ---- Color tokens read from CSS once
+    // ---- Color tokens
     const root = getComputedStyle(document.documentElement);
     const COL_SIGNAL = (root.getPropertyValue('--freq-signal-500') || '#5BFF8F').trim();
     const COL_INK    = (root.getPropertyValue('--freq-ink-500')    || '#4A3F8C').trim();
     const COL_CREAM  = (root.getPropertyValue('--freq-cream-50')   || '#F2E8D5').trim();
 
-    // ---- Canvas sizing (devicePixelRatio aware)
+    // ---- Constants
+    const SAMPLE_COUNT     = 1024;
+    const LERP             = reduceMotion ? 1.0 : 0.3;       // per-sample smoothing factor
+    const TARGET_FPS       = reduceMotion ? 30 : 60;
+    const FRAME_MIN_MS     = 1000 / TARGET_FPS;
+    const IDLE_GRACE_MS    = 1500;                            // hold full amplitude this long after last move
+    const IDLE_FLAT_MS     = 3000;                            // by this point amplitude has decayed to 0
+    const MIN_FREQ_CYCLES  =  2;
+    const MAX_FREQ_CYCLES  = 30;
+    const MIN_AMP          = 0.05;
+    const MAX_AMP          = 0.85;
+    const MAX_SPEED_PX     = 100;                             // px-per-frame ceiling for jitter normalization
+
+    // ---- State (mouse)
+    // Start at center so initial waveform is calm-mid (mid frequency, mid amp).
+    let mouseX = 0.5;
+    let mouseY = 0.5;
+    let lastClientX = null;
+    let lastClientY = null;
+    let lastSpeedNorm = 0;       // 0..1 (smoothed)
+    let lastMoveAt = 0;          // performance.now() of last mousemove
+
+    // ---- State (render)
+    const smoothBuf = new Float32Array(SAMPLE_COUNT);   // last drawn -1..1 values, smoothed
+    let phase = 0;               // running phase so the wave scrolls instead of standing still
+    let rafId = 0;
+    let lastFrameAt = 0;
+
+    // ---- Canvas sizing (DPR aware)
     let cssW = 0, cssH = 0, dpr = 1;
     function resizeCanvas(){
       dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
@@ -1947,43 +1851,43 @@ html[data-lang="en"] .zh-only{display:none !important}
       });
     }
     window.addEventListener('resize', onResize);
+    resizeCanvas();
 
-    // ---- Label / state
-    function setLabel(stateKey){
-      const labelEl = btn.querySelector('.hero__listen-btn-label');
-      let zh = '🎙 显示声波', en = '🎙 SHOW WAVEFORM';
-      if (stateKey === 'listening'){ zh = '🎙 接收中...'; en = '🎙 RECEIVING...'; }
-      else if (stateKey === 'denied'){ zh = '🎙 麦克风未授权'; en = '🎙 MIC DENIED'; }
-      else if (stateKey === 'unsupported'){ zh = '🎙 浏览器不支持'; en = '🎙 NOT SUPPORTED'; }
-      else if (stateKey === 'https'){ zh = '🎙 需要 HTTPS'; en = '🎙 HTTPS REQUIRED'; }
-      labelEl.innerHTML =
-        '<span class="zh-only">' + zh + '</span>' +
-        '<span class="en-only">' + en + '</span>';
+    // ---- Helpers
+    function lerp(a, b, t){ return a + (b - a) * t; }
+    function clamp01(v){ return v < 0 ? 0 : (v > 1 ? 1 : v); }
+
+    // ---- Mouse tracking (passive, listens on whole window)
+    function onMouseMove(e){
+      const w = window.innerWidth || 1;
+      const h = window.innerHeight || 1;
+      const nx = clamp01(e.clientX / w);
+      const ny = clamp01(e.clientY / h);
+      // Speed in px/frame (approx) — distance since last sample
+      let speedNorm = 0;
+      if (lastClientX !== null){
+        const dx = e.clientX - lastClientX;
+        const dy = e.clientY - lastClientY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        speedNorm = clamp01(dist / MAX_SPEED_PX);
+      }
+      mouseX = nx;
+      mouseY = ny;
+      lastClientX = e.clientX;
+      lastClientY = e.clientY;
+      // Smooth speed so single jitters don't spike the waveform
+      lastSpeedNorm = lerp(lastSpeedNorm, speedNorm, 0.4);
+      lastMoveAt = performance.now();
     }
-    function setBtnState(stateKey){
-      let dataState = 'idle';
-      if (stateKey === 'listening') dataState = 'listening';
-      else if (stateKey === 'denied' || stateKey === 'unsupported' || stateKey === 'https') dataState = 'error';
-      btn.setAttribute('data-state', dataState);
-      btn.setAttribute('aria-pressed', stateKey === 'listening' ? 'true' : 'false');
+    window.addEventListener('mousemove', onMouseMove, { passive: true });
+
+    // Touch fallback — drag finger to drive the scope
+    function onTouchMove(e){
+      if (!e.touches || !e.touches.length) return;
+      const t = e.touches[0];
+      onMouseMove({ clientX: t.clientX, clientY: t.clientY });
     }
-    function showVu(show){
-      if (show){ vu.hidden = false; }
-      else     { vu.hidden = true; applyVuLevel(0); }
-    }
-    function applyVuLevel(n){
-      for (let i = 0; i <= 5; i++) vu.classList.remove('vu-on-' + i);
-      vu.classList.add('vu-on-' + n);
-      vu.setAttribute('aria-valuenow', String(n));
-    }
-    function rmsToBin(rms){
-      if (rms < 0.10) return 0;
-      if (rms < 0.20) return 1;
-      if (rms < 0.35) return 2;
-      if (rms < 0.50) return 3;
-      if (rms < 0.70) return 4;
-      return 5;
-    }
+    window.addEventListener('touchmove', onTouchMove, { passive: true });
 
     // ---- Drawing
     function clearCanvas(){
@@ -2005,7 +1909,19 @@ html[data-lang="en"] .zh-only{display:none !important}
       ctx2d.restore();
     }
 
-    // Draw the (possibly smoothed) waveform from smoothBuf onto the canvas
+    // Static cream resting line — drawn underneath the waveform when amplitude is ~0
+    function drawRestingLine(){
+      ctx2d.save();
+      ctx2d.globalAlpha = 0.3;
+      ctx2d.strokeStyle = COL_CREAM;
+      ctx2d.lineWidth = 0.5;
+      ctx2d.beginPath();
+      ctx2d.moveTo(0, cssH / 2);
+      ctx2d.lineTo(cssW, cssH / 2);
+      ctx2d.stroke();
+      ctx2d.restore();
+    }
+
     function drawWave(opts){
       const lineWidth = opts.lineWidth;
       const glow      = opts.glow;
@@ -2026,43 +1942,53 @@ html[data-lang="en"] .zh-only{display:none !important}
       }
 
       ctx2d.beginPath();
-      const N = smoothBuf ? smoothBuf.length : 0;
-      if (N === 0){
-        ctx2d.moveTo(0, cssH / 2);
-        ctx2d.lineTo(cssW, cssH / 2);
-      } else {
-        const sliceX = cssW / (N - 1);
-        for (let i = 0; i < N; i++){
-          // smoothBuf values are normalized -1..1
-          const y = (cssH / 2) + smoothBuf[i] * (cssH / 2) * 0.9;
-          const x = i * sliceX;
-          if (i === 0) ctx2d.moveTo(x, y);
-          else         ctx2d.lineTo(x, y);
-        }
+      const N = smoothBuf.length;
+      const sliceX = cssW / (N - 1);
+      for (let i = 0; i < N; i++){
+        const y = (cssH / 2) + smoothBuf[i] * (cssH / 2) * 0.9;
+        const x = i * sliceX;
+        if (i === 0) ctx2d.moveTo(x, y);
+        else         ctx2d.lineTo(x, y);
       }
       ctx2d.stroke();
       ctx2d.restore();
     }
 
-    function pullTimeDomain(){
-      if (!analyser || !timeData || !smoothBuf) return;
-      analyser.getByteTimeDomainData(timeData);
-      // Subsample fftSize=2048 -> SAMPLE_COUNT=1024 (every other sample)
-      const stride = Math.max(1, Math.floor(timeData.length / smoothBuf.length));
-      let sumSq = 0;
-      for (let i = 0; i < smoothBuf.length; i++){
-        const raw = timeData[i * stride];
-        const v = (raw - 128) / 128; // -1..1
-        // lerp blend
-        smoothBuf[i] = smoothBuf[i] * (1 - LERP) + v * LERP;
-        sumSq += v * v;
+    // ---- Per-frame waveform synthesis
+    function generateWave(now){
+      // Map mouse → wave parameters
+      const frequency = lerp(MIN_FREQ_CYCLES, MAX_FREQ_CYCLES, mouseX);
+      // Y inverted: top of screen (small Y) → high amplitude (excited)
+      const amplitude = lerp(MIN_AMP, MAX_AMP, 1 - mouseY);
+      const jitter    = lastSpeedNorm * 0.3;
+
+      // Idle decay: 0 within grace, ramps to 1 (fully decayed) at IDLE_FLAT_MS
+      const idleMs = now - lastMoveAt;
+      let decayFactor = 0;
+      if (lastMoveAt === 0){
+        // Page just loaded — start in calm mid-amplitude state instead of a flat line
+        decayFactor = 0;
+      } else if (idleMs > IDLE_GRACE_MS){
+        decayFactor = clamp01((idleMs - IDLE_GRACE_MS) / (IDLE_FLAT_MS - IDLE_GRACE_MS));
       }
-      latestRms = Math.sqrt(sumSq / smoothBuf.length);
+      const liveAmp = amplitude * (1 - decayFactor);
+
+      // Phase advances every frame so the wave scrolls horizontally
+      // (faster scroll for higher frequencies feels natural)
+      phase += 0.02 + 0.0015 * frequency;
+
+      const TWO_PI = Math.PI * 2;
+      for (let i = 0; i < SAMPLE_COUNT; i++){
+        const t = i / SAMPLE_COUNT;
+        const baseWave  = Math.sin(t * TWO_PI * frequency + phase);
+        const noiseLayer = (Math.random() - 0.5) * jitter;
+        const target = baseWave * liveAmp + noiseLayer * (1 - decayFactor);
+        smoothBuf[i] = smoothBuf[i] * (1 - LERP) + target * LERP;
+      }
+      return { liveAmp, decayFactor };
     }
 
     function frame(now){
-      if (!active){ rafId = 0; return; }
-
       // FPS throttle (mainly for reduced-motion → 30fps)
       if (now - lastFrameAt < FRAME_MIN_MS - 1){
         rafId = requestAnimationFrame(frame);
@@ -2070,177 +1996,33 @@ html[data-lang="en"] .zh-only{display:none !important}
       }
       lastFrameAt = now;
 
-      pullTimeDomain();
-
-      // Silence detection: keep timestamp updated when there IS sound
-      if (latestRms >= SILENCE_RMS){
-        lastSoundAt = now;
-        isIdleSilent = false;
-      } else if (now - lastSoundAt > SILENCE_GRACE_MS){
-        isIdleSilent = true;
-      }
+      const info = generateWave(now);
 
       // Render
       clearCanvas();
       drawBaseline();
-      if (isIdleSilent){
-        // Thin line, no glow — natural decay shows it as near-flat.
-        drawWave({
-          lineWidth: 0.5,
-          glow: false,
-          color: COL_SIGNAL,
-          alpha: 0.85
-        });
-      } else {
-        drawWave({
-          lineWidth: 1.5,
-          glow: !reduceMotion,
-          color: COL_SIGNAL,
-          alpha: 1
-        });
+
+      // When fully decayed, also draw the cream resting line as visual "off" cue
+      if (info.decayFactor >= 0.98){
+        drawRestingLine();
       }
+
+      // Draw the (smoothed) waveform. Glow tones down as amplitude shrinks.
+      const isCalm = info.liveAmp < 0.08;
+      drawWave({
+        lineWidth: 1.5,
+        glow: !reduceMotion && !isCalm,
+        color: COL_SIGNAL,
+        alpha: isCalm ? 0.85 : 1
+      });
 
       rafId = requestAnimationFrame(frame);
     }
 
-    // Startup placeholder line (drawn once before audio is ready)
-    function drawStartingLine(){
-      clearCanvas();
-      drawBaseline();
-      ctx2d.save();
-      ctx2d.globalAlpha = 0.5;
-      ctx2d.strokeStyle = COL_CREAM;
-      ctx2d.lineWidth = 0.5;
-      ctx2d.beginPath();
-      ctx2d.moveTo(0, cssH / 2);
-      ctx2d.lineTo(cssW, cssH / 2);
-      ctx2d.stroke();
-      ctx2d.restore();
-    }
-
-    // Fade canvas out on stop (500ms) then clear
-    function fadeOutCanvas(){
-      cancelAnimationFrame(fadeRafId);
-      fadeStartAt = performance.now();
-      const startAlpha = 1;
-      const tick = () => {
-        const t = Math.min(1, (performance.now() - fadeStartAt) / FADE_MS);
-        canvas.style.opacity = String(startAlpha * (1 - t));
-        if (t < 1){
-          fadeRafId = requestAnimationFrame(tick);
-        } else {
-          fadeRafId = 0;
-          clearCanvas();
-          canvas.classList.remove('is-on');
-          canvas.style.opacity = '';
-        }
-      };
-      fadeRafId = requestAnimationFrame(tick);
-    }
-
-    // VU meter sampler (decoupled from RAF — 100ms tick)
-    function startVuTimer(){
-      stopVuTimer();
-      vuTimerId = setInterval(() => {
-        applyVuLevel(rmsToBin(latestRms));
-      }, 100);
-    }
-    function stopVuTimer(){
-      if (vuTimerId){ clearInterval(vuTimerId); vuTimerId = 0; }
-    }
-
-    async function start(){
-      // 1) HTTPS guard (file:// / http:// non-localhost rejected)
-      const proto = location.protocol;
-      const host = location.hostname;
-      const isLocalhost = (host === 'localhost' || host === '127.0.0.1' || host === '::1');
-      if (proto !== 'https:' && !isLocalhost){
-        setBtnState('https'); setLabel('https'); return;
-      }
-      // 2) API check
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia ||
-          !(window.AudioContext || window.webkitAudioContext)){
-        setBtnState('unsupported'); setLabel('unsupported'); return;
-      }
-      // 3) Permission
-      try {
-        micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      } catch (err){
-        setBtnState('denied'); setLabel('denied');
-        return;
-      }
-      // 4) Audio graph
-      try {
-        const Ctx = window.AudioContext || window.webkitAudioContext;
-        audioCtx = new Ctx();
-        sourceNode = audioCtx.createMediaStreamSource(micStream);
-        analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 2048;          // longer time-domain window for waveform
-        analyser.smoothingTimeConstant = 0.85;
-        sourceNode.connect(analyser);
-        timeData = new Uint8Array(analyser.fftSize);
-        smoothBuf = new Float32Array(SAMPLE_COUNT);
-      } catch (err){
-        cleanup();
-        setBtnState('unsupported'); setLabel('unsupported');
-        return;
-      }
-      // Track end (user revoked permission)
-      const track = micStream.getAudioTracks()[0];
-      if (track){ track.onended = () => { stop(); }; }
-
-      active = true;
-      lastSoundAt = performance.now();
-      lastFrameAt = 0;
-      isIdleSilent = false;
-      setBtnState('listening'); setLabel('listening');
-      showVu(true);
-
-      // Canvas on
-      cancelAnimationFrame(fadeRafId); fadeRafId = 0;
-      canvas.style.opacity = '';
-      canvas.classList.add('is-on');
-      resizeCanvas();
-      drawStartingLine();
-
-      startVuTimer();
-      rafId = requestAnimationFrame(frame);
-    }
-
-    function cleanup(){
-      if (rafId){ cancelAnimationFrame(rafId); rafId = 0; }
-      stopVuTimer();
-      try { sourceNode && sourceNode.disconnect(); } catch(_){}
-      try { analyser && analyser.disconnect(); } catch(_){}
-      if (micStream){
-        micStream.getTracks().forEach(t => { try { t.stop(); } catch(_){} });
-      }
-      if (audioCtx && audioCtx.state !== 'closed'){
-        try { audioCtx.close(); } catch(_){}
-      }
-      sourceNode = null; analyser = null; micStream = null; audioCtx = null;
-      timeData = null; smoothBuf = null;
-      latestRms = 0;
-    }
-
-    function stop(){
-      active = false;
-      cleanup();
-      showVu(false);
-      setBtnState('idle'); setLabel('idle');
-      fadeOutCanvas();
-    }
-
-    btn.addEventListener('click', () => {
-      const state = btn.getAttribute('data-state');
-      if (state === 'listening'){ stop(); }
-      else                      { start(); }
-    });
-
-    // Init
-    setBtnState('idle'); setLabel('idle');
+    // ---- Boot: canvas runs from page load (no button, no permissions)
+    rafId = requestAnimationFrame(frame);
   })();
-  // -------- /Listen Mode ----------
+  // -------- /Mouse Scope ----------
 
   // -------- Nav scroll state ----------
   const nav = document.getElementById('nav');
