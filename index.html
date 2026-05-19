@@ -312,16 +312,62 @@ html[data-lang="en"] .zh-only{display:none !important}
   display:grid;grid-template-columns:repeat(24, 1fr);
   gap:0;height:36px;align-items:end;
   border-bottom:1.5px solid var(--freq-ink-500);
+  cursor:grab;
+  touch-action:pan-y;
+  user-select:none;
+  -webkit-user-select:none;
 }
+.hero__dial-bar:active,
+.hero__dial-bar.is-dragging{cursor:grabbing}
 .hero__dial-bar span{
   display:block;height:14px;background:var(--freq-ink-500);
   border-radius:0;
+  transition:height .18s var(--ease-warp), background-color .18s var(--ease-warp), box-shadow .18s var(--ease-warp);
+  pointer-events:none;
 }
 .hero__dial-bar span.major{
   height:36px;background:var(--freq-signal-500);
   box-shadow:0 0 12px rgba(91,255,143,.5);
 }
 .hero__dial-bar span.peak{height:24px}
+.hero__dial-bar span.major.is-pulse{
+  animation:dial-major-pulse .4s var(--ease-warp) 1;
+}
+@keyframes dial-major-pulse{
+  0%  {box-shadow:0 0 12px rgba(91,255,143,.5)}
+  50% {box-shadow:0 0 24px rgba(91,255,143,.95), 0 0 40px rgba(91,255,143,.4)}
+  100%{box-shadow:0 0 12px rgba(91,255,143,.5)}
+}
+.hero__dial--shake{animation:dial-shake .08s steps(3, end) 1}
+@keyframes dial-shake{
+  0%  {transform:translateX(-1px)}
+  50% {transform:translateX(1px)}
+  100%{transform:translateX(0)}
+}
+
+/* Dial foot — flavor caption + drag hint */
+.hero__dial-foot{
+  display:flex;justify-content:space-between;align-items:baseline;gap:var(--space-4);
+  margin-top:var(--space-3);
+  flex-wrap:wrap;
+}
+.hero__dial-flavor{
+  font-family:var(--font-mono);font-weight:500;font-size:.75rem;
+  letter-spacing:.10em;
+  color:var(--freq-static-400);
+  transition:opacity .2s var(--ease-warp);
+  min-height:1em;
+}
+.hero__dial-flavor.is-fading{opacity:0}
+.hero__dial-hint{
+  font-family:var(--font-mono);font-weight:500;font-size:.6875rem;
+  letter-spacing:.16em;text-transform:uppercase;
+  color:var(--freq-static-400);
+  opacity:.85;
+  transition:opacity .4s var(--ease-warp);
+  white-space:nowrap;
+}
+.hero__dial-hint.is-hidden{opacity:0;pointer-events:none}
 
 /* =========================================================
    Section base
@@ -843,13 +889,33 @@ html[data-lang="en"] .zh-only{display:none !important}
       </div>
     </div>
 
-    <div class="hero__dial" aria-hidden="true">
+    <div class="hero__dial">
       <div class="hero__freq-readout">
         <span>SIGNAL · NOW BROADCASTING</span>
-        <strong>FREQ <span class="freq-value">94.7</span> MHz</strong>
+        <strong>FREQ <span class="freq-value" id="freqValue">94.7</span> MHz</strong>
         <span>EST. 2026 · SHANGHAI</span>
       </div>
-      <div class="hero__dial-bar" id="dialBar"></div>
+      <div
+        class="hero__dial-bar"
+        id="dialBar"
+        role="slider"
+        tabindex="0"
+        aria-label="频率调谐器 / Frequency Tuner"
+        aria-valuemin="88"
+        aria-valuemax="108"
+        aria-valuenow="94.7"
+        aria-valuetext="94.7 MHz"
+      ></div>
+      <div class="hero__dial-foot">
+        <p class="hero__dial-flavor" id="dialFlavor" aria-live="polite">
+          <span class="zh-only">中烘 · 焦糖、奶油、平衡</span>
+          <span class="en-only">Medium roast · caramel, cream, balanced</span>
+        </p>
+        <p class="hero__dial-hint" id="dialHint">
+          <span class="zh-only">← 拖动调频 →</span>
+          <span class="en-only">← DRAG TO TUNE →</span>
+        </p>
+      </div>
     </div>
 
   </section>
@@ -1431,22 +1497,256 @@ html[data-lang="en"] .zh-only{display:none !important}
 (function(){
   'use strict';
 
-  // -------- Hero dial bar ----------
+  // -------- Hero dial bar — interactive frequency tuner ----------
   const dial = document.getElementById('dialBar');
-  if (dial){
-    const total = 24;
-    // pointer at column index 11 (≈ 94.7 marker)
-    const pointer = 11;
-    let html = '';
-    for (let i=0;i<total;i++){
-      let cls = '';
-      if (i % 4 === 0) cls = 'major';
-      if (i === pointer) cls = 'major';
-      else if (i === pointer-1 || i === pointer+1) cls = 'peak';
-      html += `<span class="${cls}"></span>`;
+  const freqValueEl = document.getElementById('freqValue');
+  const flavorEl = document.getElementById('dialFlavor');
+  const hintEl = document.getElementById('dialHint');
+  if (dial && freqValueEl && flavorEl){
+    const TOTAL = 24;
+    const FREQ_MIN = 88.0;
+    const FREQ_MAX = 108.0;
+    const FREQ_RANGE = FREQ_MAX - FREQ_MIN;       // 20
+    const SPOT_FREQS = [88.5, 94.7, 97.9, 101.3]; // 门店频率
+    const SNAP_THRESHOLD = 0.4;                   // 吸附阈值 MHz
+    const HIGHLIGHT_THRESHOLD = 0.3;              // 门店刻度高亮阈值 MHz
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    let currentFreq = 94.7;
+    let isDragging = false;
+    let hintDismissed = false;
+    let dialTransitioning = false;
+
+    // 按当前频率构建刻度（每 4 格大刻度，最近门店那格 .major+pulse，相邻 .peak）
+    function renderDial(freq, opts){
+      opts = opts || {};
+      const ratio = (freq - FREQ_MIN) / FREQ_RANGE;
+      const cursorIdx = Math.round(ratio * (TOTAL - 1));
+
+      // 找到 ±HIGHLIGHT_THRESHOLD 内最近的门店频率
+      let nearestSpot = null, nearestSpotDist = Infinity;
+      SPOT_FREQS.forEach(sf => {
+        const d = Math.abs(freq - sf);
+        if (d < nearestSpotDist && d <= HIGHLIGHT_THRESHOLD){
+          nearestSpotDist = d; nearestSpot = sf;
+        }
+      });
+      let spotIdx = -1;
+      if (nearestSpot !== null){
+        const sr = (nearestSpot - FREQ_MIN) / FREQ_RANGE;
+        spotIdx = Math.round(sr * (TOTAL - 1));
+      }
+
+      let html = '';
+      for (let i = 0; i < TOTAL; i++){
+        let cls = '';
+        if (i === spotIdx){
+          cls = 'major' + (opts.pulse ? ' is-pulse' : '');
+        } else if (i === cursorIdx && spotIdx === -1){
+          // 没靠近门店时，光标位置作为常规 major（替代原本固定第 11 格）
+          cls = 'major';
+        } else if (i % 4 === 0){
+          // 每 4 格一个 peak 作为常规刻度节奏
+          cls = 'peak';
+        } else if (
+          (spotIdx !== -1 && (i === spotIdx - 1 || i === spotIdx + 1)) ||
+          (spotIdx === -1 && (i === cursorIdx - 1 || i === cursorIdx + 1))
+        ){
+          cls = 'peak';
+        }
+        html += '<span class="' + cls + '"></span>';
+      }
+      dial.innerHTML = html;
     }
-    dial.innerHTML = html;
+
+    function flavorFor(freq){
+      if (freq < 93.0){
+        return {
+          zh: '深烘 · 可可、烟熏、坚果余韵',
+          en: 'Dark roast · cocoa, smoke, nutty finish',
+          band: 'low'
+        };
+      } else if (freq < 100.0){
+        return {
+          zh: '中烘 · 焦糖、奶油、平衡',
+          en: 'Medium roast · caramel, cream, balanced',
+          band: 'mid'
+        };
+      }
+      return {
+        zh: '浅烘 · 柑橘、核果、酸亮',
+        en: 'Light roast · citrus, stone fruit, bright',
+        band: 'high'
+      };
+    }
+
+    let lastBand = 'mid';
+    function setFlavor(freq){
+      const f = flavorFor(freq);
+      if (f.band === lastBand) return;
+      lastBand = f.band;
+      const apply = () => {
+        flavorEl.innerHTML =
+          '<span class="zh-only">' + f.zh + '</span>' +
+          '<span class="en-only">' + f.en + '</span>';
+      };
+      if (reduceMotion){
+        apply();
+      } else {
+        flavorEl.classList.add('is-fading');
+        setTimeout(() => {
+          apply();
+          // 强制下一帧再移除，触发 fade-in
+          requestAnimationFrame(() => {
+            flavorEl.classList.remove('is-fading');
+          });
+        }, 200);
+      }
+    }
+
+    function setFreq(freq, opts){
+      opts = opts || {};
+      const clamped = Math.max(FREQ_MIN, Math.min(FREQ_MAX, freq));
+      const rounded = Math.round(clamped * 10) / 10;
+      currentFreq = rounded;
+      freqValueEl.textContent = rounded.toFixed(1);
+      dial.setAttribute('aria-valuenow', rounded.toFixed(1));
+      dial.setAttribute('aria-valuetext', rounded.toFixed(1) + ' MHz');
+      renderDial(rounded, { pulse: !!opts.pulse });
+      setFlavor(rounded);
+    }
+
+    function freqFromClientX(clientX){
+      const rect = dial.getBoundingClientRect();
+      const x = Math.max(0, Math.min(rect.width, clientX - rect.left));
+      const ratio = rect.width === 0 ? 0 : x / rect.width;
+      return FREQ_MIN + ratio * FREQ_RANGE;
+    }
+
+    function dismissHintSoon(){
+      if (hintDismissed || !hintEl) return;
+      hintDismissed = true;
+      setTimeout(() => { hintEl.classList.add('is-hidden'); }, 800);
+    }
+
+    function snapIfClose(){
+      let bestSpot = null, bestDist = Infinity;
+      SPOT_FREQS.forEach(sf => {
+        const d = Math.abs(currentFreq - sf);
+        if (d < bestDist){ bestDist = d; bestSpot = sf; }
+      });
+      if (bestSpot !== null && bestDist <= SNAP_THRESHOLD && bestDist > 0.05){
+        // 平滑过渡到门店频率
+        animateTo(bestSpot);
+      } else if (bestSpot !== null && bestDist <= 0.05){
+        // 已经几乎贴上 — 直接确认 + 震动
+        setFreq(bestSpot, { pulse: true });
+        triggerShake();
+      }
+    }
+
+    function animateTo(target){
+      if (reduceMotion){
+        setFreq(target, { pulse: true });
+        triggerShake();
+        return;
+      }
+      const start = currentFreq;
+      const delta = target - start;
+      const duration = 200;
+      const t0 = performance.now();
+      dialTransitioning = true;
+      function step(now){
+        const t = Math.min(1, (now - t0) / duration);
+        // ease-out
+        const eased = 1 - Math.pow(1 - t, 3);
+        const v = start + delta * eased;
+        setFreq(v);
+        if (t < 1){
+          requestAnimationFrame(step);
+        } else {
+          dialTransitioning = false;
+          setFreq(target, { pulse: true });
+          triggerShake();
+        }
+      }
+      requestAnimationFrame(step);
+    }
+
+    function triggerShake(){
+      if (reduceMotion) return;
+      dial.classList.remove('hero__dial--shake');
+      // reflow 强制重启动画
+      void dial.offsetWidth;
+      dial.classList.add('hero__dial--shake');
+      setTimeout(() => dial.classList.remove('hero__dial--shake'), 100);
+    }
+
+    // ---- Pointer events (mouse + touch via Pointer Events) ----
+    function onPointerDown(e){
+      // 仅左键 / 触屏 / 笔
+      if (e.button !== undefined && e.button !== 0) return;
+      isDragging = true;
+      dial.classList.add('is-dragging');
+      dial.setPointerCapture && dial.setPointerCapture(e.pointerId);
+      const f = freqFromClientX(e.clientX);
+      setFreq(f);
+      dismissHintSoon();
+      e.preventDefault();
+    }
+    function onPointerMove(e){
+      if (!isDragging) return;
+      const f = freqFromClientX(e.clientX);
+      setFreq(f);
+    }
+    function onPointerUp(e){
+      if (!isDragging) return;
+      isDragging = false;
+      dial.classList.remove('is-dragging');
+      try { dial.releasePointerCapture && dial.releasePointerCapture(e.pointerId); } catch(_){}
+      snapIfClose();
+    }
+
+    if (window.PointerEvent){
+      dial.addEventListener('pointerdown', onPointerDown);
+      dial.addEventListener('pointermove', onPointerMove);
+      dial.addEventListener('pointerup', onPointerUp);
+      dial.addEventListener('pointercancel', onPointerUp);
+    } else {
+      // 兜底：mouse + touch
+      dial.addEventListener('mousedown', (e) => onPointerDown({clientX:e.clientX, button:0, preventDefault:()=>e.preventDefault()}));
+      window.addEventListener('mousemove', (e) => onPointerMove({clientX:e.clientX}));
+      window.addEventListener('mouseup', () => onPointerUp({}));
+      dial.addEventListener('touchstart', (e) => {
+        const t = e.touches[0]; if (!t) return;
+        onPointerDown({clientX:t.clientX, button:0, preventDefault:()=>e.preventDefault()});
+      }, {passive:false});
+      dial.addEventListener('touchmove', (e) => {
+        const t = e.touches[0]; if (!t) return;
+        onPointerMove({clientX:t.clientX});
+      }, {passive:true});
+      dial.addEventListener('touchend', () => onPointerUp({}));
+    }
+
+    // ---- Keyboard a11y ----
+    dial.addEventListener('keydown', (e) => {
+      let step = 0;
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') step = -0.1;
+      else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') step = 0.1;
+      else if (e.key === 'Home'){ setFreq(FREQ_MIN); dismissHintSoon(); e.preventDefault(); return; }
+      else if (e.key === 'End'){ setFreq(FREQ_MAX); dismissHintSoon(); e.preventDefault(); return; }
+      else return;
+      if (e.shiftKey) step *= 10;
+      setFreq(currentFreq + step);
+      dismissHintSoon();
+      e.preventDefault();
+    });
+
+    // ---- Init ----
+    setFreq(94.7);
   }
+  // -------- /Hero dial bar ----------
 
   // -------- Nav scroll state ----------
   const nav = document.getElementById('nav');
