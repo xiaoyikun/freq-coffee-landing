@@ -38,10 +38,22 @@
   --freq-signal-500:#5BFF8F;
   --freq-signal-400:#3DDC7B;
   --freq-signal-700:#1FA85C;
+  /* Live signal — micro hue shift driven by dial frequency.
+     LOW (88)   → warm yellow-green  (slight yellow lean, ~5° hue rotate)
+     MID (98)   → brand canonical    #5BFF8F
+     HIGH (108) → cool teal-green    (slight cyan lean, ~5° hue rotate)
+     Lightness/saturation are LOCKED — only hue micro-rotates ±5°.
+     This keeps brand identity intact while adding subtle ambient unity. */
+  --freq-signal-live:#5BFF8F;
   /* Color · Cream (暖米白调和，必须每屏出现) */
   --freq-cream-50:#F2E8D5;
   --freq-cream-100:#F8F1E2;
   --freq-cream-200:#E8DCC2;
+  /* Live cream — barely perceptible hue tint reflecting current ambience.
+     Stays inside cream territory (lightness 0.93+) but borrows ~6% of current hue,
+     so when dial is on warm end the retail screen feels marginally warmer too.
+     Prevents the hard tonal jump between dark <-> cream sections. */
+  --freq-cream-100-live:#F8F1E2;
   /* Color · Neutral / Status */
   --freq-carbon-700:#3A3450;
   --freq-static-400:#8B82A8;
@@ -86,8 +98,8 @@ body{
 img,svg{display:block;max-width:100%}
 button,input{font:inherit;color:inherit;border:0;background:transparent;outline:0}
 a{color:inherit;text-decoration:none}
-:focus-visible{outline:2px solid var(--freq-signal-500);outline-offset:3px}
-::selection{background:var(--freq-signal-500);color:var(--freq-ink-900)}
+:focus-visible{outline:2px solid var(--freq-signal-live);outline-offset:3px}
+::selection{background:var(--freq-signal-live);color:var(--freq-ink-900)}
 
 /* Containers */
 .container{max-width:1320px;margin:0 auto;padding:0 var(--space-5)}
@@ -125,7 +137,7 @@ html[data-lang="en"] .zh-only{display:none !important}
   color:var(--freq-cream-50);
   display:inline-flex;align-items:baseline;gap:2px;
 }
-.wordmark .dot{color:var(--freq-signal-500)}
+.wordmark .dot{color:var(--freq-signal-live)}
 .nav__menu{display:none;align-items:center;gap:var(--space-6)}
 @media (min-width:1024px){.nav__menu{display:flex}}
 .nav__link{
@@ -138,10 +150,10 @@ html[data-lang="en"] .zh-only{display:none !important}
   position:relative;padding:var(--space-2) 0;
   transition:color .2s var(--ease-warp);
 }
-.nav__link:hover{color:var(--freq-signal-500)}
+.nav__link:hover{color:var(--freq-signal-live)}
 .nav__link::after{
   content:"";position:absolute;left:0;right:0;bottom:-2px;height:1.5px;
-  background:var(--freq-signal-500);
+  background:var(--freq-signal-live);
   transform:scaleX(0);transform-origin:left;
   transition:transform .25s var(--ease-warp);
 }
@@ -201,13 +213,13 @@ html[data-lang="en"] .zh-only{display:none !important}
   white-space:nowrap;
 }
 .btn--primary{
-  background:var(--freq-signal-500);
+  background:var(--freq-signal-live);
   color:var(--freq-ink-900);
 }
 .btn--primary:hover{
   background:var(--freq-signal-400);
   transform:translateY(-2px);
-  box-shadow:0 0 24px var(--freq-signal-500), 0 0 48px rgba(91,255,143,.3);
+  box-shadow:0 0 24px var(--freq-signal-live), 0 0 48px rgba(91,255,143,.3);
 }
 .btn--primary:active{background:var(--freq-signal-700);transform:translateY(0)}
 .btn--secondary{
@@ -226,7 +238,7 @@ html[data-lang="en"] .zh-only{display:none !important}
   color:inherit;border-bottom:1.5px solid currentColor;padding-bottom:4px;
   transition:color .2s var(--ease-warp), gap .2s var(--ease-warp);
 }
-.btn--ghost:hover{color:var(--freq-signal-500);gap:10px}
+.btn--ghost:hover{color:var(--freq-signal-live);gap:10px}
 .btn--ghost.dark:hover{color:var(--freq-ink-900)}
 
 /* =========================================================
@@ -261,12 +273,12 @@ html[data-lang="en"] .zh-only{display:none !important}
 .hero__eyebrow{
   font-family:var(--font-mono);font-weight:500;font-size:.875rem;
   letter-spacing:.18em;text-transform:uppercase;
-  color:var(--freq-signal-500);
+  color:var(--freq-signal-live);
   margin-bottom:var(--space-7);
   display:inline-flex;align-items:center;gap:var(--space-3);
 }
 .hero__eyebrow::before{
-  content:"";display:inline-block;width:32px;height:1.5px;background:var(--freq-signal-500);
+  content:"";display:inline-block;width:32px;height:1.5px;background:var(--freq-signal-live);
 }
 .hero__mega{
   font-family:var(--font-display);font-weight:800;
@@ -277,7 +289,7 @@ html[data-lang="en"] .zh-only{display:none !important}
   margin-bottom:var(--space-6);
 }
 .hero__mega .dot{
-  color:var(--freq-signal-500);
+  color:var(--freq-signal-live);
   display:inline-block;
   animation:phosphor-pulse 2s ease-in-out infinite;
 }
@@ -287,7 +299,7 @@ html[data-lang="en"] .zh-only{display:none !important}
     opacity:1;
   }
   50%{
-    text-shadow:0 0 24px var(--freq-signal-500), 0 0 48px rgba(91,255,143,.55), 0 0 96px rgba(91,255,143,.25);
+    text-shadow:0 0 24px var(--freq-signal-live), 0 0 48px rgba(91,255,143,.55), 0 0 96px rgba(91,255,143,.25);
     opacity:.92;
   }
 }
@@ -319,7 +331,7 @@ html[data-lang="en"] .zh-only{display:none !important}
   color:var(--freq-cream-50);font-weight:500;
   font-size:1.125rem;letter-spacing:.04em;
 }
-.hero__freq-readout .freq-value{color:var(--freq-signal-500)}
+.hero__freq-readout .freq-value{color:var(--freq-signal-live)}
 .hero__dial-bar{
   display:grid;grid-template-columns:repeat(24, 1fr);
   gap:0;height:36px;align-items:end;
@@ -338,7 +350,7 @@ html[data-lang="en"] .zh-only{display:none !important}
   pointer-events:none;
 }
 .hero__dial-bar span.major{
-  height:36px;background:var(--freq-signal-500);
+  height:36px;background:var(--freq-signal-live);
   box-shadow:0 0 12px rgba(91,255,143,.5);
 }
 .hero__dial-bar span.peak{height:24px}
@@ -403,7 +415,7 @@ html[data-lang="en"] .zh-only{display:none !important}
    ========================================================= */
 .section{padding:var(--space-9) 0;position:relative}
 .section--dark{background:var(--freq-ink-live);color:var(--freq-cream-50)}
-.section--cream{background:var(--freq-cream-100);color:var(--freq-carbon-700)}
+.section--cream{background:var(--freq-cream-100-live);color:var(--freq-carbon-700)}
 .section--void{background:var(--freq-void-950);color:var(--freq-cream-50)}
 
 .section__head{
@@ -413,7 +425,7 @@ html[data-lang="en"] .zh-only{display:none !important}
 .section__head .kicker{
   font-family:var(--font-mono);font-weight:500;font-size:.75rem;
   letter-spacing:.18em;text-transform:uppercase;
-  color:var(--freq-signal-500);
+  color:var(--freq-signal-live);
   display:inline-flex;align-items:center;gap:var(--space-3);
 }
 .section__head .kicker::before{
@@ -461,7 +473,7 @@ html[data-lang="en"] .zh-only{display:none !important}
 .cassette:hover{
   transform:translateY(-4px);
   background:var(--freq-ink-700-live);
-  box-shadow:inset 0 0 0 1.5px var(--freq-signal-500);
+  box-shadow:inset 0 0 0 1.5px var(--freq-signal-live);
   z-index:2;
 }
 .cassette__strip{
@@ -470,8 +482,8 @@ html[data-lang="en"] .zh-only{display:none !important}
 }
 .cassette__strip span{display:block;background:var(--freq-ink-500-live);height:100%}
 .cassette__strip span:nth-child(4n+1){background:var(--freq-cream-50)}
-.cassette__strip span.peak{background:var(--freq-signal-500)}
-.cassette:hover .cassette__strip span.peak{box-shadow:0 0 8px var(--freq-signal-500)}
+.cassette__strip span.peak{background:var(--freq-signal-live)}
+.cassette:hover .cassette__strip span.peak{box-shadow:0 0 8px var(--freq-signal-live)}
 .cassette__name{
   font-family:var(--font-display);font-weight:700;
   font-size:clamp(1.625rem, 2.4vw, 2.25rem);
@@ -493,7 +505,7 @@ html[data-lang="en"] .zh-only{display:none !important}
 .cassette__meta .row{display:flex;justify-content:space-between;gap:var(--space-3);align-items:center}
 .cassette__meta .label{color:var(--freq-static-400)}
 .cassette__meta .val{color:var(--freq-cream-50)}
-.cassette__meta .price{color:var(--freq-signal-500);font-size:.8125rem}
+.cassette__meta .price{color:var(--freq-signal-live);font-size:.8125rem}
 
 /* =========================================================
    Take It Home · Screen 3 — Retail (Cream)
@@ -620,7 +632,7 @@ html[data-lang="en"] .zh-only{display:none !important}
   font-family:var(--font-display);font-weight:800;
   font-size:clamp(3.5rem, 6vw, 5rem);
   line-height:.95;letter-spacing:-0.04em;
-  color:var(--freq-signal-500);
+  color:var(--freq-signal-live);
 }
 .stat__label{
   font-family:var(--font-mono);font-weight:500;font-size:.6875rem;
@@ -668,7 +680,7 @@ html[data-lang="en"] .zh-only{display:none !important}
 }
 .spot:last-child{border-bottom:1px solid var(--freq-ink-500-live)}
 .spot:hover{padding-left:var(--space-3);padding-right:var(--space-3)}
-.spot:hover .spot__name{color:var(--freq-signal-500)}
+.spot:hover .spot__name{color:var(--freq-signal-live)}
 .spot__index{
   font-family:var(--font-mono);font-weight:700;font-size:.75rem;
   letter-spacing:.1em;color:var(--freq-static-400);padding-top:6px;
@@ -690,7 +702,7 @@ html[data-lang="en"] .zh-only{display:none !important}
 .spot__addr .en{display:block;font-family:var(--font-body);opacity:.75;font-size:.8125rem;margin-top:2px}
 .spot__freq{
   font-family:var(--font-mono);font-weight:700;font-size:.875rem;
-  letter-spacing:.06em;color:var(--freq-signal-500);
+  letter-spacing:.06em;color:var(--freq-signal-live);
   padding-top:6px;white-space:nowrap;
 }
 
@@ -709,22 +721,22 @@ html[data-lang="en"] .zh-only{display:none !important}
   border-bottom:1px solid var(--freq-ink-500-live);padding-bottom:var(--space-3);
   margin-bottom:var(--space-4);
 }
-.spots-map__head .live{color:var(--freq-signal-500);display:inline-flex;align-items:center;gap:6px}
+.spots-map__head .live{color:var(--freq-signal-live);display:inline-flex;align-items:center;gap:6px}
 .spots-map__head .live::before{
-  content:"";display:inline-block;width:6px;height:6px;background:var(--freq-signal-500);
+  content:"";display:inline-block;width:6px;height:6px;background:var(--freq-signal-live);
   animation:phosphor-pulse 1.4s ease-in-out infinite;
 }
 .spots-map svg{flex:1;width:100%;height:100%}
 .spot-marker{transition:transform .25s var(--ease-warp)}
 .spot-marker .pin{
-  fill:var(--freq-signal-500);
+  fill:var(--freq-signal-live);
   filter:drop-shadow(0 0 6px rgba(91,255,143,.6));
 }
 .spot-marker.is-active .pin{
   animation:phosphor-pulse 1.4s ease-in-out infinite;
 }
 .spot-marker .ring{
-  fill:none;stroke:var(--freq-signal-500);stroke-width:1.5;
+  fill:none;stroke:var(--freq-signal-live);stroke-width:1.5;
   opacity:.5;
 }
 
@@ -771,11 +783,11 @@ html[data-lang="en"] .zh-only{display:none !important}
   border:0;border-bottom:1.5px solid var(--freq-ink-500-live);
   padding:10px 0;font-size:1rem;color:var(--freq-cream-50);
   font-family:var(--font-mono);
-  caret-color:var(--freq-signal-500);
+  caret-color:var(--freq-signal-live);
   transition:border-color .2s var(--ease-warp);
 }
 .tune__input::placeholder{color:var(--freq-static-400);font-family:var(--font-mono)}
-.tune__input:focus{border-bottom-color:var(--freq-signal-500)}
+.tune__input:focus{border-bottom-color:var(--freq-signal-live)}
 
 .social{
   margin-top:var(--space-7);
@@ -788,7 +800,7 @@ html[data-lang="en"] .zh-only{display:none !important}
   color:var(--freq-cream-50);
   transition:border-color .2s var(--ease-warp), color .2s var(--ease-warp);
 }
-.social a:hover{border-color:var(--freq-signal-500);color:var(--freq-signal-500)}
+.social a:hover{border-color:var(--freq-signal-live);color:var(--freq-signal-live)}
 
 /* Footer */
 .footer{
@@ -812,7 +824,7 @@ html[data-lang="en"] .zh-only{display:none !important}
   font-size:.9375rem;color:var(--freq-cream-50);
   transition:color .2s var(--ease-warp);
 }
-.footer__col a:hover{color:var(--freq-signal-500)}
+.footer__col a:hover{color:var(--freq-signal-live)}
 .footer__brand .wordmark{font-size:1.5rem;margin-bottom:var(--space-4)}
 .footer__slogan{
   font-family:var(--font-cn);font-weight:500;font-size:1rem;
@@ -1225,11 +1237,11 @@ html[data-lang="en"] .zh-only{display:none !important}
           </div>
 
           <p class="manifesto__body zh" id="maniZh">
-            频率从来不是一个固定的数字。它是早晨第一杯醒脑的高频，也是深夜独处时的低频。它是地铁里耳机里的中波，也是周末散步时的静电。FREQ. 不教你"正确的咖啡"，我们让你听见自己今天该喝的那一频。复古不是怀旧——是把上世纪工业美学拆开，重组成此刻的潮流语言。<strong style="color:var(--freq-signal-500);font-weight:400">调到你这一频。</strong>
+            频率从来不是一个固定的数字。它是早晨第一杯醒脑的高频，也是深夜独处时的低频。它是地铁里耳机里的中波，也是周末散步时的静电。FREQ. 不教你"正确的咖啡"，我们让你听见自己今天该喝的那一频。复古不是怀旧——是把上世纪工业美学拆开，重组成此刻的潮流语言。<strong style="color:var(--freq-signal-live);font-weight:400">调到你这一频。</strong>
           </p>
 
           <p class="manifesto__body en" id="maniEn" hidden>
-            A frequency was never a fixed number. It's the high band of your first morning sip, and the low band of a quiet midnight. It's the AM in your subway commute, the static in your weekend walk. FREQ. doesn't teach you "the right coffee" — we help you hear the one you need today. Retro isn't nostalgia. It's the industrial aesthetic of the last century, taken apart and rebuilt for now. <strong style="color:var(--freq-signal-500);font-weight:500">Tune in to your frequency.</strong>
+            A frequency was never a fixed number. It's the high band of your first morning sip, and the low band of a quiet midnight. It's the AM in your subway commute, the static in your weekend walk. FREQ. doesn't teach you "the right coffee" — we help you hear the one you need today. Retro isn't nostalgia. It's the industrial aesthetic of the last century, taken apart and rebuilt for now. <strong style="color:var(--freq-signal-live);font-weight:500">Tune in to your frequency.</strong>
           </p>
         </div>
 
@@ -1809,11 +1821,32 @@ html[data-lang="en"] .zh-only{display:none !important}
       // Numbers tuned to roughly match original static ink-700 (#2D2466) and ink-500 (#4A3F8C).
       const LIFT_700 = 1.70;
       const LIFT_500 = 2.70;
-      // Spring state per channel × per tier (3 tiers × 3 channels = 9 values).
+
+      // Signal-live endpoints: micro hue rotation around brand canonical #5BFF8F.
+      // Lightness/saturation locked; only hue shifts ±5° in green territory.
+      // LOW  → warm yellow-green (more red)   #6FFF7A
+      // MID  → brand canonical                #5BFF8F
+      // HIGH → cool teal-green   (more blue)  #4FFFA8
+      const SIG_LOW  = [0x6F, 0xFF, 0x7A];
+      const SIG_MID  = [0x5B, 0xFF, 0x8F];
+      const SIG_HIGH = [0x4F, 0xFF, 0xA8];
+
+      // Cream-live endpoints: barely-perceptible hue tint of cream-100 (#F8F1E2).
+      // ~6% RGB shift max; never escapes cream territory (lightness 0.93+).
+      // LOW  → faintly warmer cream  #F9EFDC
+      // MID  → cream canonical       #F8F1E2
+      // HIGH → faintly cooler cream  #F4F1E8
+      const CRM_LOW  = [0xF9, 0xEF, 0xDC];
+      const CRM_MID  = [0xF8, 0xF1, 0xE2];
+      const CRM_HIGH = [0xF4, 0xF1, 0xE8];
+
+      // Spring state: 5 tiers × 3 channels = 15 springs.
       function mkSpring(v){ return { value: v, velocity: 0 }; }
       const s900 = [mkSpring(MID[0]), mkSpring(MID[1]), mkSpring(MID[2])];
       const s700 = [mkSpring(MID[0]*LIFT_700), mkSpring(MID[1]*LIFT_700), mkSpring(MID[2]*LIFT_700)];
       const s500 = [mkSpring(MID[0]*LIFT_500), mkSpring(MID[1]*LIFT_500), mkSpring(MID[2]*LIFT_500)];
+      const sSig = [mkSpring(SIG_MID[0]), mkSpring(SIG_MID[1]), mkSpring(SIG_MID[2])];
+      const sCrm = [mkSpring(CRM_MID[0]), mkSpring(CRM_MID[1]), mkSpring(CRM_MID[2])];
       const STIFF = 35, DAMP = 11;            // gentle — color shouldn't snap, it should drift
       const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       let lastT = performance.now();
@@ -1822,10 +1855,10 @@ html[data-lang="en"] .zh-only{display:none !important}
       function lerp3(a, b, t){
         return [a[0] + (b[0]-a[0])*t, a[1] + (b[1]-a[1])*t, a[2] + (b[2]-a[2])*t];
       }
-      function targetFor(freq){
+      function targetFor(freq, low, mid, high){
         // 0..0.5 → LOW→MID, 0.5..1 → MID→HIGH
         const u = (freq - FREQ_MIN) / FREQ_RANGE;
-        return u <= 0.5 ? lerp3(LOW, MID, u * 2) : lerp3(MID, HIGH, (u - 0.5) * 2);
+        return u <= 0.5 ? lerp3(low, mid, u * 2) : lerp3(mid, high, (u - 0.5) * 2);
       }
       function step(spring, target, dt){
         const disp = spring.value - target;
@@ -1839,8 +1872,10 @@ html[data-lang="en"] .zh-only{display:none !important}
       function frame(now){
         const dt = Math.min(0.05, (now - lastT) / 1000);
         lastT = now;
-        const base = targetFor(currentFreq);
-        // Three target tiers: same hue, lifted brightness for surface and border.
+        const base = targetFor(currentFreq, LOW, MID, HIGH);
+        const sigT = targetFor(currentFreq, SIG_LOW, SIG_MID, SIG_HIGH);
+        const crmT = targetFor(currentFreq, CRM_LOW, CRM_MID, CRM_HIGH);
+        // Three ink tiers: same hue, lifted brightness for surface and border.
         const t900 = base;
         const t700 = [base[0]*LIFT_700, base[1]*LIFT_700, base[2]*LIFT_700];
         const t500 = [base[0]*LIFT_500, base[1]*LIFT_500, base[2]*LIFT_500];
@@ -1850,17 +1885,23 @@ html[data-lang="en"] .zh-only{display:none !important}
             s900[i].value = t900[i]; s900[i].velocity = 0;
             s700[i].value = t700[i]; s700[i].velocity = 0;
             s500[i].value = t500[i]; s500[i].velocity = 0;
+            sSig[i].value = sigT[i]; sSig[i].velocity = 0;
+            sCrm[i].value = crmT[i]; sCrm[i].velocity = 0;
           }
         } else {
           for (let i = 0; i < 3; i++){
             step(s900[i], t900[i], dt);
             step(s700[i], t700[i], dt);
             step(s500[i], t500[i], dt);
+            step(sSig[i], sigT[i], dt);
+            step(sCrm[i], crmT[i], dt);
           }
         }
-        root.style.setProperty('--freq-ink-live',     rgbStr(s900));
-        root.style.setProperty('--freq-ink-700-live', rgbStr(s700));
-        root.style.setProperty('--freq-ink-500-live', rgbStr(s500));
+        root.style.setProperty('--freq-ink-live',        rgbStr(s900));
+        root.style.setProperty('--freq-ink-700-live',    rgbStr(s700));
+        root.style.setProperty('--freq-ink-500-live',    rgbStr(s500));
+        root.style.setProperty('--freq-signal-live',     rgbStr(sSig));
+        root.style.setProperty('--freq-cream-100-live',  rgbStr(sCrm));
         requestAnimationFrame(frame);
       }
       requestAnimationFrame(frame);
