@@ -1831,6 +1831,28 @@ html[data-lang="en"] .zh-only{display:none !important}
     let rafId = 0;
     let lastFrameAt = 0;
 
+    // ---- Spring physics state ----
+    // Each wave parameter has its own { value, velocity } pair driven toward a target
+    // by Hooke's law (F = -k·displacement - c·velocity). This gives natural inertia:
+    // moving the mouse "pulls" parameters; releasing lets them oscillate to rest.
+    // Tuning rationale:
+    //   stiffness ≈ 60-100  → snappy without rigidity
+    //   damping   ≈ 12-18   → 1 small overshoot then settle (under-damped on purpose)
+    //   higher freq tracks slower (heavier) to feel like a tuning knob with momentum
+    function makeSpring(initial){ return { value: initial, velocity: 0 }; }
+    function stepSpring(spring, target, stiffness, damping, dt){
+      const displacement = spring.value - target;
+      const springForce  = -stiffness * displacement;
+      const dampForce    = -damping   * spring.velocity;
+      const acceleration = springForce + dampForce;
+      spring.velocity += acceleration * dt;
+      spring.value    += spring.velocity * dt;
+      return spring.value;
+    }
+    const freqSpring = makeSpring(lerp(MIN_FREQ_CYCLES, MAX_FREQ_CYCLES, 0.5));
+    const ampSpring  = makeSpring(lerp(MIN_AMP,         MAX_AMP,         0.5));
+    const jitSpring  = makeSpring(0);
+
     // ---- Canvas sizing (DPR aware)
     let cssW = 0, cssH = 0, dpr = 1;
     function resizeCanvas(){
@@ -1955,12 +1977,23 @@ html[data-lang="en"] .zh-only{display:none !important}
     }
 
     // ---- Per-frame waveform synthesis
-    function generateWave(now){
-      // Map mouse → wave parameters
-      const frequency = lerp(MIN_FREQ_CYCLES, MAX_FREQ_CYCLES, mouseX);
+    function generateWave(now, dtSeconds){
+      // Map mouse → TARGET wave parameters (springs will chase these)
+      const freqTarget = lerp(MIN_FREQ_CYCLES, MAX_FREQ_CYCLES, mouseX);
       // Y inverted: top of screen (small Y) → high amplitude (excited)
-      const amplitude = lerp(MIN_AMP, MAX_AMP, 1 - mouseY);
-      const jitter    = lastSpeedNorm * 0.3;
+      const ampTarget  = lerp(MIN_AMP, MAX_AMP, 1 - mouseY);
+      const jitTarget  = lastSpeedNorm * 0.3;
+
+      // Step springs. Different stiffness per parameter gives each its own "weight":
+      //   - frequency knob feels heavier (slower track) → like a real tuning dial
+      //   - amplitude reacts mid-snappy → vertical mouse moves feel responsive
+      //   - jitter follows speed closely → jolts arrive without delay
+      // Damping kept under-critical (~0.6-0.7 ratio) so there's 1 subtle overshoot.
+      // dt is clamped to avoid the spring exploding on tab-switch frame gaps.
+      const dt = Math.min(dtSeconds, 0.05);
+      const liveFreq = stepSpring(freqSpring, freqTarget,  55, 13, dt);
+      const liveAmpRaw = stepSpring(ampSpring,  ampTarget,  90, 14, dt);
+      const liveJit  = Math.max(0, stepSpring(jitSpring,  jitTarget, 120, 16, dt));
 
       // Idle decay: 0 within grace, ramps to 1 (fully decayed) at IDLE_FLAT_MS
       const idleMs = now - lastMoveAt;
@@ -1971,17 +2004,18 @@ html[data-lang="en"] .zh-only{display:none !important}
       } else if (idleMs > IDLE_GRACE_MS){
         decayFactor = clamp01((idleMs - IDLE_GRACE_MS) / (IDLE_FLAT_MS - IDLE_GRACE_MS));
       }
-      const liveAmp = amplitude * (1 - decayFactor);
+      const liveAmp = liveAmpRaw * (1 - decayFactor);
 
-      // Phase advances every frame so the wave scrolls horizontally
-      // (faster scroll for higher frequencies feels natural)
-      phase += 0.02 + 0.0015 * frequency;
+      // Phase advances every frame so the wave scrolls horizontally.
+      // Tie scroll rate to the spring-tracked frequency, not the raw target,
+      // so scroll speed also has inertia (no abrupt scroll jumps).
+      phase += 0.02 + 0.0015 * liveFreq;
 
       const TWO_PI = Math.PI * 2;
       for (let i = 0; i < SAMPLE_COUNT; i++){
         const t = i / SAMPLE_COUNT;
-        const baseWave  = Math.sin(t * TWO_PI * frequency + phase);
-        const noiseLayer = (Math.random() - 0.5) * jitter;
+        const baseWave  = Math.sin(t * TWO_PI * liveFreq + phase);
+        const noiseLayer = (Math.random() - 0.5) * liveJit;
         const target = baseWave * liveAmp + noiseLayer * (1 - decayFactor);
         smoothBuf[i] = smoothBuf[i] * (1 - LERP) + target * LERP;
       }
@@ -1994,9 +2028,10 @@ html[data-lang="en"] .zh-only{display:none !important}
         rafId = requestAnimationFrame(frame);
         return;
       }
+      const dtSeconds = lastFrameAt === 0 ? 1/60 : (now - lastFrameAt) / 1000;
       lastFrameAt = now;
 
-      const info = generateWave(now);
+      const info = generateWave(now, dtSeconds);
 
       // Render
       clearCanvas();
