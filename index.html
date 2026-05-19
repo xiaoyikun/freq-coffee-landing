@@ -439,6 +439,25 @@ html[data-lang="en"] .zh-only{display:none !important}
   .hero__listen-dot{animation:none !important}
 }
 
+/* Hero · Oscilloscope canvas — full-bleed waveform between mega + dial */
+.hero__scope{
+  position:relative;
+  left:50%;
+  transform:translateX(-50%);
+  width:100vw;
+  height:80px;
+  display:block;
+  margin:var(--space-7) 0;
+  z-index:1; /* below mega text */
+  pointer-events:none;
+  opacity:0;
+  transition:opacity .45s var(--ease-warp);
+}
+.hero__scope.is-on{opacity:1}
+@media (max-width:767px){
+  .hero__scope{height:60px;margin:var(--space-6) 0}
+}
+
 /* =========================================================
    Section base
    ========================================================= */
@@ -959,6 +978,9 @@ html[data-lang="en"] .zh-only{display:none !important}
       </div>
     </div>
 
+    <!-- Oscilloscope canvas — full-bleed waveform; sized via JS -->
+    <canvas class="hero__scope" id="heroScope" aria-hidden="true" width="1600" height="160"></canvas>
+
     <div class="hero__dial">
       <div class="hero__freq-readout">
         <span>SIGNAL · NOW BROADCASTING</span>
@@ -1003,8 +1025,8 @@ html[data-lang="en"] .zh-only{display:none !important}
             data-state="idle"
           >
             <span class="hero__listen-btn-label">
-              <span class="zh-only">🎙 启用麦克风调频</span>
-              <span class="en-only">🎙 LISTEN MODE</span>
+              <span class="zh-only">🎙 显示声波</span>
+              <span class="en-only">🎙 SHOW WAVEFORM</span>
             </span>
             <span class="hero__listen-dot" aria-hidden="true"></span>
           </button>
@@ -1860,15 +1882,20 @@ html[data-lang="en"] .zh-only{display:none !important}
   }
   // -------- /Hero dial bar ----------
 
-  // -------- Listen Mode — mic-driven frequency tuner ----------
+  // -------- Listen Mode — mic-driven oscilloscope (waveform visualizer) ----------
+  // Visualizes the user's voice as a real-time time-domain waveform across the hero.
+  // Does NOT control the dial-bar — it is a pure visual feedback layer.
+  // The window.__freqDial bridge is preserved for future extensions but unused here.
   (function listenMode(){
-    const btn = document.getElementById('listenBtn');
-    const vu  = document.getElementById('vuMeter');
-    if (!btn || !vu) return;
+    const btn    = document.getElementById('listenBtn');
+    const vu     = document.getElementById('vuMeter');
+    const canvas = document.getElementById('heroScope');
+    if (!btn || !vu || !canvas) return;
 
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const ctx2d = canvas.getContext('2d');
 
-    // 状态
+    // ---- State
     let active = false;
     let audioCtx = null;
     let analyser = null;
@@ -1876,22 +1903,56 @@ html[data-lang="en"] .zh-only{display:none !important}
     let sourceNode = null;
     let rafId = 0;
     let vuTimerId = 0;
-    let scanDir = 1;             // +1 上行 / -1 下行
-    let lastSoundAt = 0;         // 最近一次有声的时间（用于 800ms 静默自停）
-    let timeData = null;         // Uint8Array buffer
+    let timeData = null;        // Uint8Array buffer (analyser.fftSize)
+    let smoothBuf = null;       // Float32Array, smoothed time-domain data for lerp
     let latestRms = 0;
+    let lastSoundAt = 0;        // when RMS last crossed threshold
+    let isIdleSilent = false;   // sub-state inside listening: silent ≥200ms → thin line, no glow
+    let lastFrameAt = 0;        // for reduced-motion 30fps throttle
+    let fadeStartAt = 0;        // for canvas fade-out on stop
+    let fadeRafId = 0;
 
+    // ---- Constants
     const SILENCE_RMS = 0.02;
-    const SILENCE_TIMEOUT_MS = 800;
-    const RMS_TO_MHZ_PER_FRAME = reduceMotion ? 0.4 : 0.8; // reduce-motion 减半
-    const RMS_NORMALIZE_MAX = 0.6; // 0..0.6 归一为 0..1
+    const SILENCE_GRACE_MS = 200;     // RMS<thresh for ≥200ms → idle silent
+    const SAMPLE_COUNT = 1024;        // points drawn per frame (subsampled from fftSize=2048)
+    const LERP = reduceMotion ? 1.0 : 0.3;  // 1.0 = no smoothing
+    const TARGET_FPS = reduceMotion ? 30 : 60;
+    const FRAME_MIN_MS = 1000 / TARGET_FPS;
+    const FADE_MS = 500;
 
+    // ---- Color tokens read from CSS once
+    const root = getComputedStyle(document.documentElement);
+    const COL_SIGNAL = (root.getPropertyValue('--freq-signal-500') || '#5BFF8F').trim();
+    const COL_INK    = (root.getPropertyValue('--freq-ink-500')    || '#4A3F8C').trim();
+    const COL_CREAM  = (root.getPropertyValue('--freq-cream-50')   || '#F2E8D5').trim();
+
+    // ---- Canvas sizing (devicePixelRatio aware)
+    let cssW = 0, cssH = 0, dpr = 1;
+    function resizeCanvas(){
+      dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
+      const rect = canvas.getBoundingClientRect();
+      cssW = Math.max(1, Math.floor(rect.width));
+      cssH = Math.max(1, Math.floor(rect.height));
+      canvas.width  = cssW * dpr;
+      canvas.height = cssH * dpr;
+      ctx2d.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    let resizeRaf = 0;
+    function onResize(){
+      if (resizeRaf) cancelAnimationFrame(resizeRaf);
+      resizeRaf = requestAnimationFrame(() => {
+        resizeRaf = 0;
+        resizeCanvas();
+      });
+    }
+    window.addEventListener('resize', onResize);
+
+    // ---- Label / state
     function setLabel(stateKey){
-      // 复用同一个按钮内的双语 span，由 data-state 控制颜色
-      // 文本依赖 html[data-lang] 切换，这里直接整体替换内部 span
       const labelEl = btn.querySelector('.hero__listen-btn-label');
-      let zh = '🎙 启用麦克风调频', en = '🎙 LISTEN MODE';
-      if (stateKey === 'listening'){ zh = '🎙 监听中...'; en = '🎙 LISTENING...'; }
+      let zh = '🎙 显示声波', en = '🎙 SHOW WAVEFORM';
+      if (stateKey === 'listening'){ zh = '🎙 接收中...'; en = '🎙 RECEIVING...'; }
       else if (stateKey === 'denied'){ zh = '🎙 麦克风未授权'; en = '🎙 MIC DENIED'; }
       else if (stateKey === 'unsupported'){ zh = '🎙 浏览器不支持'; en = '🎙 NOT SUPPORTED'; }
       else if (stateKey === 'https'){ zh = '🎙 需要 HTTPS'; en = '🎙 HTTPS REQUIRED'; }
@@ -1899,36 +1960,23 @@ html[data-lang="en"] .zh-only{display:none !important}
         '<span class="zh-only">' + zh + '</span>' +
         '<span class="en-only">' + en + '</span>';
     }
-
     function setBtnState(stateKey){
-      // stateKey: idle | listening | error
       let dataState = 'idle';
       if (stateKey === 'listening') dataState = 'listening';
       else if (stateKey === 'denied' || stateKey === 'unsupported' || stateKey === 'https') dataState = 'error';
       btn.setAttribute('data-state', dataState);
       btn.setAttribute('aria-pressed', stateKey === 'listening' ? 'true' : 'false');
     }
-
     function showVu(show){
-      if (show){
-        vu.hidden = false;
-      } else {
-        vu.hidden = true;
-        applyVuLevel(0);
-      }
+      if (show){ vu.hidden = false; }
+      else     { vu.hidden = true; applyVuLevel(0); }
     }
-
     function applyVuLevel(n){
-      // 清掉所有 vu-on-N
-      for (let i = 0; i <= 5; i++){
-        vu.classList.remove('vu-on-' + i);
-      }
+      for (let i = 0; i <= 5; i++) vu.classList.remove('vu-on-' + i);
       vu.classList.add('vu-on-' + n);
       vu.setAttribute('aria-valuenow', String(n));
     }
-
     function rmsToBin(rms){
-      // 0..0.10→0, ..0.20→1, ..0.35→2, ..0.50→3, ..0.70→4, 0.70+→5
       if (rms < 0.10) return 0;
       if (rms < 0.20) return 1;
       if (rms < 0.35) return 2;
@@ -1937,50 +1985,160 @@ html[data-lang="en"] .zh-only{display:none !important}
       return 5;
     }
 
-    function computeRms(){
-      if (!analyser || !timeData) return 0;
-      analyser.getByteTimeDomainData(timeData);
-      let sumSq = 0;
-      for (let i = 0; i < timeData.length; i++){
-        const v = (timeData[i] - 128) / 128; // -1..1
-        sumSq += v * v;
-      }
-      return Math.sqrt(sumSq / timeData.length); // 0..~1
+    // ---- Drawing
+    function clearCanvas(){
+      ctx2d.clearRect(0, 0, cssW, cssH);
     }
 
-    function frame(){
+    // Faint dotted baseline (centerline) — never a grid
+    function drawBaseline(){
+      ctx2d.save();
+      ctx2d.globalAlpha = 0.3;
+      ctx2d.strokeStyle = COL_INK;
+      ctx2d.lineWidth = 1;
+      ctx2d.setLineDash([2, 4]);
+      ctx2d.beginPath();
+      ctx2d.moveTo(0, cssH / 2);
+      ctx2d.lineTo(cssW, cssH / 2);
+      ctx2d.stroke();
+      ctx2d.setLineDash([]);
+      ctx2d.restore();
+    }
+
+    // Draw the (possibly smoothed) waveform from smoothBuf onto the canvas
+    function drawWave(opts){
+      const lineWidth = opts.lineWidth;
+      const glow      = opts.glow;
+      const color     = opts.color;
+      const alpha     = opts.alpha == null ? 1 : opts.alpha;
+
+      ctx2d.save();
+      ctx2d.globalAlpha = alpha;
+      ctx2d.lineJoin = 'round';
+      ctx2d.lineCap = 'round';
+      ctx2d.strokeStyle = color;
+      ctx2d.lineWidth = lineWidth;
+      if (glow){
+        ctx2d.shadowColor = COL_SIGNAL;
+        ctx2d.shadowBlur = 4;
+      } else {
+        ctx2d.shadowBlur = 0;
+      }
+
+      ctx2d.beginPath();
+      const N = smoothBuf ? smoothBuf.length : 0;
+      if (N === 0){
+        ctx2d.moveTo(0, cssH / 2);
+        ctx2d.lineTo(cssW, cssH / 2);
+      } else {
+        const sliceX = cssW / (N - 1);
+        for (let i = 0; i < N; i++){
+          // smoothBuf values are normalized -1..1
+          const y = (cssH / 2) + smoothBuf[i] * (cssH / 2) * 0.9;
+          const x = i * sliceX;
+          if (i === 0) ctx2d.moveTo(x, y);
+          else         ctx2d.lineTo(x, y);
+        }
+      }
+      ctx2d.stroke();
+      ctx2d.restore();
+    }
+
+    function pullTimeDomain(){
+      if (!analyser || !timeData || !smoothBuf) return;
+      analyser.getByteTimeDomainData(timeData);
+      // Subsample fftSize=2048 -> SAMPLE_COUNT=1024 (every other sample)
+      const stride = Math.max(1, Math.floor(timeData.length / smoothBuf.length));
+      let sumSq = 0;
+      for (let i = 0; i < smoothBuf.length; i++){
+        const raw = timeData[i * stride];
+        const v = (raw - 128) / 128; // -1..1
+        // lerp blend
+        smoothBuf[i] = smoothBuf[i] * (1 - LERP) + v * LERP;
+        sumSq += v * v;
+      }
+      latestRms = Math.sqrt(sumSq / smoothBuf.length);
+    }
+
+    function frame(now){
       if (!active){ rafId = 0; return; }
-      const now = performance.now();
-      latestRms = computeRms();
 
-      // 让位窗口：用户最近 1s 内有交互 → 不扫描
-      const dial = window.__freqDial;
-      const userActiveRecently = dial && (now - (dial.lastUserInteractionAt || 0) < 1000);
+      // FPS throttle (mainly for reduced-motion → 30fps)
+      if (now - lastFrameAt < FRAME_MIN_MS - 1){
+        rafId = requestAnimationFrame(frame);
+        return;
+      }
+      lastFrameAt = now;
 
+      pullTimeDomain();
+
+      // Silence detection: keep timestamp updated when there IS sound
       if (latestRms >= SILENCE_RMS){
         lastSoundAt = now;
+        isIdleSilent = false;
+      } else if (now - lastSoundAt > SILENCE_GRACE_MS){
+        isIdleSilent = true;
       }
-      const silentTooLong = (now - lastSoundAt) > SILENCE_TIMEOUT_MS;
 
-      if (dial && !userActiveRecently && latestRms >= SILENCE_RMS && !silentTooLong){
-        // 归一 0..1
-        const norm = Math.min(1, latestRms / RMS_NORMALIZE_MAX);
-        const stepMhz = norm * RMS_TO_MHZ_PER_FRAME;
-        let next = dial.getFreq() + scanDir * stepMhz;
-        // 反向触发
-        if (next >= dial.FREQ_MAX){
-          next = dial.FREQ_MAX;
-          scanDir = -1;
-        } else if (next <= dial.FREQ_MIN){
-          next = dial.FREQ_MIN;
-          scanDir = 1;
-        }
-        dial.setFreq(next, { fromListen: true });
+      // Render
+      clearCanvas();
+      drawBaseline();
+      if (isIdleSilent){
+        // Thin line, no glow — natural decay shows it as near-flat.
+        drawWave({
+          lineWidth: 0.5,
+          glow: false,
+          color: COL_SIGNAL,
+          alpha: 0.85
+        });
+      } else {
+        drawWave({
+          lineWidth: 1.5,
+          glow: !reduceMotion,
+          color: COL_SIGNAL,
+          alpha: 1
+        });
       }
 
       rafId = requestAnimationFrame(frame);
     }
 
+    // Startup placeholder line (drawn once before audio is ready)
+    function drawStartingLine(){
+      clearCanvas();
+      drawBaseline();
+      ctx2d.save();
+      ctx2d.globalAlpha = 0.5;
+      ctx2d.strokeStyle = COL_CREAM;
+      ctx2d.lineWidth = 0.5;
+      ctx2d.beginPath();
+      ctx2d.moveTo(0, cssH / 2);
+      ctx2d.lineTo(cssW, cssH / 2);
+      ctx2d.stroke();
+      ctx2d.restore();
+    }
+
+    // Fade canvas out on stop (500ms) then clear
+    function fadeOutCanvas(){
+      cancelAnimationFrame(fadeRafId);
+      fadeStartAt = performance.now();
+      const startAlpha = 1;
+      const tick = () => {
+        const t = Math.min(1, (performance.now() - fadeStartAt) / FADE_MS);
+        canvas.style.opacity = String(startAlpha * (1 - t));
+        if (t < 1){
+          fadeRafId = requestAnimationFrame(tick);
+        } else {
+          fadeRafId = 0;
+          clearCanvas();
+          canvas.classList.remove('is-on');
+          canvas.style.opacity = '';
+        }
+      };
+      fadeRafId = requestAnimationFrame(tick);
+    }
+
+    // VU meter sampler (decoupled from RAF — 100ms tick)
     function startVuTimer(){
       stopVuTimer();
       vuTimerId = setInterval(() => {
@@ -1992,50 +2150,59 @@ html[data-lang="en"] .zh-only{display:none !important}
     }
 
     async function start(){
-      // 1) HTTPS 检查（file:// / http:// 非 localhost 都拒绝）
+      // 1) HTTPS guard (file:// / http:// non-localhost rejected)
       const proto = location.protocol;
       const host = location.hostname;
       const isLocalhost = (host === 'localhost' || host === '127.0.0.1' || host === '::1');
       if (proto !== 'https:' && !isLocalhost){
         setBtnState('https'); setLabel('https'); return;
       }
-      // 2) API 检查
+      // 2) API check
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia ||
           !(window.AudioContext || window.webkitAudioContext)){
         setBtnState('unsupported'); setLabel('unsupported'); return;
       }
-      // 3) 请求权限
+      // 3) Permission
       try {
         micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
       } catch (err){
         setBtnState('denied'); setLabel('denied');
         return;
       }
-      // 4) 建链
+      // 4) Audio graph
       try {
         const Ctx = window.AudioContext || window.webkitAudioContext;
         audioCtx = new Ctx();
         sourceNode = audioCtx.createMediaStreamSource(micStream);
         analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 256;
+        analyser.fftSize = 2048;          // longer time-domain window for waveform
         analyser.smoothingTimeConstant = 0.85;
         sourceNode.connect(analyser);
         timeData = new Uint8Array(analyser.fftSize);
+        smoothBuf = new Float32Array(SAMPLE_COUNT);
       } catch (err){
         cleanup();
         setBtnState('unsupported'); setLabel('unsupported');
         return;
       }
-      // 用户撤销权限的事件
+      // Track end (user revoked permission)
       const track = micStream.getAudioTracks()[0];
-      if (track){
-        track.onended = () => { stop(); };
-      }
+      if (track){ track.onended = () => { stop(); }; }
 
       active = true;
       lastSoundAt = performance.now();
+      lastFrameAt = 0;
+      isIdleSilent = false;
       setBtnState('listening'); setLabel('listening');
       showVu(true);
+
+      // Canvas on
+      cancelAnimationFrame(fadeRafId); fadeRafId = 0;
+      canvas.style.opacity = '';
+      canvas.classList.add('is-on');
+      resizeCanvas();
+      drawStartingLine();
+
       startVuTimer();
       rafId = requestAnimationFrame(frame);
     }
@@ -2051,7 +2218,8 @@ html[data-lang="en"] .zh-only{display:none !important}
       if (audioCtx && audioCtx.state !== 'closed'){
         try { audioCtx.close(); } catch(_){}
       }
-      sourceNode = null; analyser = null; micStream = null; audioCtx = null; timeData = null;
+      sourceNode = null; analyser = null; micStream = null; audioCtx = null;
+      timeData = null; smoothBuf = null;
       latestRms = 0;
     }
 
@@ -2060,19 +2228,16 @@ html[data-lang="en"] .zh-only{display:none !important}
       cleanup();
       showVu(false);
       setBtnState('idle'); setLabel('idle');
+      fadeOutCanvas();
     }
 
     btn.addEventListener('click', () => {
       const state = btn.getAttribute('data-state');
-      if (state === 'listening'){
-        stop();
-      } else {
-        // error 状态允许重试
-        start();
-      }
+      if (state === 'listening'){ stop(); }
+      else                      { start(); }
     });
 
-    // 初始化
+    // Init
     setBtnState('idle'); setLabel('idle');
   })();
   // -------- /Listen Mode ----------
