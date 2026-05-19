@@ -22,6 +22,12 @@
   --freq-ink-700:#2D2466;
   --freq-ink-500:#4A3F8C;
   --freq-void-950:#0B0820;
+  /* Live ambient ink — driven by dial frequency (JS writes here).
+     LOW (88 MHz)  = warm dark brown-purple #2A1E2E
+     MID (98 MHz)  = brand neutral #1B1646
+     HIGH (108 MHz)= cool dark indigo-blue #16243E
+     Spring-smoothed; never escapes 0.18-0.22 lightness band → anti-slop safe. */
+  --freq-ink-live:#1B1646;
   /* Color · Signal (电光绿，仅 ≤8% 面积) */
   --freq-signal-500:#5BFF8F;
   --freq-signal-400:#3DDC7B;
@@ -62,7 +68,7 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
 body{
-  background:var(--freq-ink-900);
+  background:var(--freq-ink-live);
   color:var(--freq-cream-50);
   font-family:var(--font-body);
   font-size:1rem;
@@ -99,7 +105,7 @@ html[data-lang="en"] .zh-only{display:none !important}
   border-bottom:1px solid transparent;
 }
 .nav.is-scrolled{
-  background:color-mix(in srgb, var(--freq-ink-900) 95%, transparent);
+  background:color-mix(in srgb, var(--freq-ink-live) 95%, transparent);
   backdrop-filter:blur(18px);
   -webkit-backdrop-filter:blur(18px);
   border-bottom-color:var(--freq-ink-500);
@@ -222,7 +228,7 @@ html[data-lang="en"] .zh-only{display:none !important}
    ========================================================= */
 .hero{
   position:relative;min-height:100vh;
-  background:var(--freq-ink-900);
+  background:var(--freq-ink-live);
   display:flex;flex-direction:column;
   padding:120px var(--space-5) var(--space-7);
   overflow:hidden;
@@ -390,7 +396,7 @@ html[data-lang="en"] .zh-only{display:none !important}
    Section base
    ========================================================= */
 .section{padding:var(--space-9) 0;position:relative}
-.section--dark{background:var(--freq-ink-900);color:var(--freq-cream-50)}
+.section--dark{background:var(--freq-ink-live);color:var(--freq-cream-50)}
 .section--cream{background:var(--freq-cream-100);color:var(--freq-carbon-700)}
 .section--void{background:var(--freq-void-950);color:var(--freq-cream-50)}
 
@@ -1778,6 +1784,59 @@ html[data-lang="en"] .zh-only{display:none !important}
       FREQ_MAX: FREQ_MAX,
       lastUserInteractionAt: 0
     };
+
+    // -------- Ambience — dial frequency drives the page's ambient ink color ----------
+    // Three-point gradient in linear RGB (good enough; OKLCh would be ideal but adds 50 lines).
+    // All three endpoints stay in 0.18-0.22 lightness band → anti-slop safe (no neon, no cyber-pink).
+    //   LOW  (88 MHz)  #2A1E2E  warm dark brown-purple
+    //   MID  (98 MHz)  #1B1646  brand neutral (current ink-900)
+    //   HIGH (108 MHz) #16243E  cool dark indigo-blue
+    // Spring physics smooth the color so rapid dial wiggles don't cause flicker.
+    (function ambience(){
+      const LOW  = [0x2A, 0x1E, 0x2E];
+      const MID  = [0x1B, 0x16, 0x46];
+      const HIGH = [0x16, 0x24, 0x3E];
+      // Spring state per channel (one of 0-255 R/G/B), values float for smooth transit
+      const rs = { value: MID[0], velocity: 0 };
+      const gs = { value: MID[1], velocity: 0 };
+      const bs = { value: MID[2], velocity: 0 };
+      const STIFF = 35, DAMP = 11;            // gentle — color shouldn't snap, it should drift
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      let lastT = performance.now();
+      const root = document.documentElement;
+
+      function lerp3(a, b, t){
+        return [a[0] + (b[0]-a[0])*t, a[1] + (b[1]-a[1])*t, a[2] + (b[2]-a[2])*t];
+      }
+      function targetFor(freq){
+        // 0..0.5 → LOW→MID, 0.5..1 → MID→HIGH
+        const u = (freq - FREQ_MIN) / FREQ_RANGE;
+        return u <= 0.5 ? lerp3(LOW, MID, u * 2) : lerp3(MID, HIGH, (u - 0.5) * 2);
+      }
+      function step(spring, target, dt){
+        const disp = spring.value - target;
+        const a = -STIFF*disp - DAMP*spring.velocity;
+        spring.velocity += a * dt;
+        spring.value    += spring.velocity * dt;
+      }
+      function frame(now){
+        const dt = Math.min(0.05, (now - lastT) / 1000);
+        lastT = now;
+        const [tr, tg, tb] = targetFor(currentFreq);
+        if (reduce){
+          rs.value = tr; gs.value = tg; bs.value = tb;
+          rs.velocity = gs.velocity = bs.velocity = 0;
+        } else {
+          step(rs, tr, dt); step(gs, tg, dt); step(bs, tb, dt);
+        }
+        const r = Math.round(Math.max(0, Math.min(255, rs.value)));
+        const g = Math.round(Math.max(0, Math.min(255, gs.value)));
+        const b = Math.round(Math.max(0, Math.min(255, bs.value)));
+        root.style.setProperty('--freq-ink-live', `rgb(${r},${g},${b})`);
+        requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+    })();
   }
   // -------- /Hero dial bar ----------
 
