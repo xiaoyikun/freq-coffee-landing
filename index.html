@@ -23,11 +23,17 @@
   --freq-ink-500:#4A3F8C;
   --freq-void-950:#0B0820;
   /* Live ambient ink — driven by dial frequency (JS writes here).
-     LOW (88 MHz)  = warm dark brown-purple #2A1E2E
-     MID (98 MHz)  = brand neutral #1B1646
-     HIGH (108 MHz)= cool dark indigo-blue #16243E
-     Spring-smoothed; never escapes 0.18-0.22 lightness band → anti-slop safe. */
+     LOW (88 MHz)  = warm dark brown-purple
+     MID (98 MHz)  = brand neutral
+     HIGH (108 MHz)= cool dark indigo-blue
+     Three lightness tiers share the SAME hue at any frequency:
+       --freq-ink-live      ~0.20 lightness (page background)
+       --freq-ink-700-live  ~0.30 lightness (card surface)
+       --freq-ink-500-live  ~0.45 lightness (border / divider / dial tick)
+     Spring-smoothed; endpoints stay anti-slop safe (no neon, no cyber-pink). */
   --freq-ink-live:#1B1646;
+  --freq-ink-700-live:#2D2466;
+  --freq-ink-500-live:#4A3F8C;
   /* Color · Signal (电光绿，仅 ≤8% 面积) */
   --freq-signal-500:#5BFF8F;
   --freq-signal-400:#3DDC7B;
@@ -108,7 +114,7 @@ html[data-lang="en"] .zh-only{display:none !important}
   background:color-mix(in srgb, var(--freq-ink-live) 95%, transparent);
   backdrop-filter:blur(18px);
   -webkit-backdrop-filter:blur(18px);
-  border-bottom-color:var(--freq-ink-500);
+  border-bottom-color:var(--freq-ink-500-live);
 }
 .nav__inner{display:flex;align-items:center;justify-content:space-between;gap:var(--space-5)}
 .wordmark{
@@ -145,7 +151,7 @@ html[data-lang="en"] .zh-only{display:none !important}
   display:inline-flex;align-items:center;gap:0;
   font-family:var(--font-mono);font-weight:700;font-size:.6875rem;
   letter-spacing:.12em;text-transform:uppercase;
-  border:1.5px solid var(--freq-ink-500);
+  border:1.5px solid var(--freq-ink-500-live);
   padding:0;
 }
 .lang-switch button{
@@ -317,7 +323,7 @@ html[data-lang="en"] .zh-only{display:none !important}
 .hero__dial-bar{
   display:grid;grid-template-columns:repeat(24, 1fr);
   gap:0;height:36px;align-items:end;
-  border-bottom:1.5px solid var(--freq-ink-500);
+  border-bottom:1.5px solid var(--freq-ink-500-live);
   cursor:grab;
   touch-action:pan-y;
   user-select:none;
@@ -326,7 +332,7 @@ html[data-lang="en"] .zh-only{display:none !important}
 .hero__dial-bar:active,
 .hero__dial-bar.is-dragging{cursor:grabbing}
 .hero__dial-bar span{
-  display:block;height:14px;background:var(--freq-ink-500);
+  display:block;height:14px;background:var(--freq-ink-500-live);
   border-radius:0;
   transition:height .18s var(--ease-warp), background-color .18s var(--ease-warp), box-shadow .18s var(--ease-warp);
   pointer-events:none;
@@ -438,8 +444,8 @@ html[data-lang="en"] .zh-only{display:none !important}
   display:grid;
   grid-template-columns:1fr;
   gap:1.5px;
-  background:var(--freq-ink-500);
-  border:1.5px solid var(--freq-ink-500);
+  background:var(--freq-ink-500-live);
+  border:1.5px solid var(--freq-ink-500-live);
 }
 @media (min-width:640px){.dose-grid{grid-template-columns:repeat(2,1fr)}}
 @media (min-width:1024px){.dose-grid{grid-template-columns:repeat(3,1fr)}}
@@ -454,7 +460,7 @@ html[data-lang="en"] .zh-only{display:none !important}
 }
 .cassette:hover{
   transform:translateY(-4px);
-  background:var(--freq-ink-700);
+  background:var(--freq-ink-700-live);
   box-shadow:inset 0 0 0 1.5px var(--freq-signal-500);
   z-index:2;
 }
@@ -462,7 +468,7 @@ html[data-lang="en"] .zh-only{display:none !important}
   display:grid;grid-template-columns:repeat(24,1fr);
   gap:2px;height:8px;
 }
-.cassette__strip span{display:block;background:var(--freq-ink-500);height:100%}
+.cassette__strip span{display:block;background:var(--freq-ink-500-live);height:100%}
 .cassette__strip span:nth-child(4n+1){background:var(--freq-cream-50)}
 .cassette__strip span.peak{background:var(--freq-signal-500)}
 .cassette:hover .cassette__strip span.peak{box-shadow:0 0 8px var(--freq-signal-500)}
@@ -478,7 +484,7 @@ html[data-lang="en"] .zh-only{display:none !important}
 }
 .cassette__meta{
   margin-top:auto;padding-top:var(--space-4);
-  border-top:1px dashed var(--freq-ink-500);
+  border-top:1px dashed var(--freq-ink-500-live);
   display:flex;flex-direction:column;gap:var(--space-2);
   font-family:var(--font-mono);font-weight:500;font-size:.6875rem;
   letter-spacing:.12em;text-transform:uppercase;
@@ -499,7 +505,7 @@ html[data-lang="en"] .zh-only{display:none !important}
 
 .retail-card{
   background:var(--freq-cream-200);
-  border:1.5px solid var(--freq-ink-500);
+  border:1.5px solid var(--freq-ink-500-live);
   padding:0;
   display:flex;flex-direction:column;gap:0;
   transition:transform .25s var(--ease-warp), border-color .2s var(--ease-warp), background-color .2s var(--ease-warp), box-shadow .25s var(--ease-warp);
@@ -520,7 +526,7 @@ html[data-lang="en"] .zh-only{display:none !important}
   max-height:280px;
   background:var(--freq-ink-900);
   overflow:hidden;
-  border-bottom:1.5px solid var(--freq-ink-500);
+  border-bottom:1.5px solid var(--freq-ink-500-live);
 }
 .retail-card__shot img{
   width:100%;height:100%;
@@ -574,14 +580,14 @@ html[data-lang="en"] .zh-only{display:none !important}
 
 .manifesto{
   position:relative;
-  border-left:1.5px solid var(--freq-ink-500);
+  border-left:1.5px solid var(--freq-ink-500-live);
   padding-left:var(--space-6);
 }
 .manifesto__switch{
   display:inline-flex;align-items:center;gap:0;
   font-family:var(--font-mono);font-weight:700;font-size:.6875rem;
   letter-spacing:.12em;text-transform:uppercase;
-  border:1.5px solid var(--freq-ink-500);
+  border:1.5px solid var(--freq-ink-500-live);
   margin-bottom:var(--space-5);
 }
 .manifesto__switch button{
@@ -606,7 +612,7 @@ html[data-lang="en"] .zh-only{display:none !important}
 }
 @media (min-width:480px){.fix-stats{grid-template-columns:repeat(3,1fr)}}
 .stat{
-  border-top:1.5px solid var(--freq-ink-500);
+  border-top:1.5px solid var(--freq-ink-500-live);
   padding-top:var(--space-4);
   display:flex;flex-direction:column;gap:var(--space-2);
 }
@@ -635,7 +641,7 @@ html[data-lang="en"] .zh-only{display:none !important}
   font-family:var(--font-mono);font-weight:500;font-size:.6875rem;
   letter-spacing:.14em;text-transform:uppercase;
   padding:8px 14px;
-  border:1.5px solid var(--freq-ink-500);
+  border:1.5px solid var(--freq-ink-500-live);
   color:var(--freq-static-400);
   cursor:pointer;
   transition:color .2s var(--ease-warp), border-color .2s var(--ease-warp), background-color .2s var(--ease-warp);
@@ -655,12 +661,12 @@ html[data-lang="en"] .zh-only{display:none !important}
 .spot{
   display:grid;grid-template-columns:auto 1fr auto;gap:var(--space-4);
   padding:var(--space-5) 0;
-  border-top:1px solid var(--freq-ink-500);
+  border-top:1px solid var(--freq-ink-500-live);
   cursor:pointer;
   transition:background-color .2s var(--ease-warp), padding .2s var(--ease-warp);
   align-items:start;
 }
-.spot:last-child{border-bottom:1px solid var(--freq-ink-500)}
+.spot:last-child{border-bottom:1px solid var(--freq-ink-500-live)}
 .spot:hover{padding-left:var(--space-3);padding-right:var(--space-3)}
 .spot:hover .spot__name{color:var(--freq-signal-500)}
 .spot__index{
@@ -689,8 +695,8 @@ html[data-lang="en"] .zh-only{display:none !important}
 }
 
 .spots-map{
-  background:var(--freq-ink-700);
-  border:1.5px solid var(--freq-ink-500);
+  background:var(--freq-ink-700-live);
+  border:1.5px solid var(--freq-ink-500-live);
   padding:var(--space-5);
   position:sticky;top:96px;
   aspect-ratio:1/1;display:flex;flex-direction:column;
@@ -700,7 +706,7 @@ html[data-lang="en"] .zh-only{display:none !important}
   font-family:var(--font-mono);font-weight:500;font-size:.6875rem;
   letter-spacing:.14em;text-transform:uppercase;
   color:var(--freq-static-400);
-  border-bottom:1px solid var(--freq-ink-500);padding-bottom:var(--space-3);
+  border-bottom:1px solid var(--freq-ink-500-live);padding-bottom:var(--space-3);
   margin-bottom:var(--space-4);
 }
 .spots-map__head .live{color:var(--freq-signal-500);display:inline-flex;align-items:center;gap:6px}
@@ -762,7 +768,7 @@ html[data-lang="en"] .zh-only{display:none !important}
 }
 .tune__input{
   background:transparent;
-  border:0;border-bottom:1.5px solid var(--freq-ink-500);
+  border:0;border-bottom:1.5px solid var(--freq-ink-500-live);
   padding:10px 0;font-size:1rem;color:var(--freq-cream-50);
   font-family:var(--font-mono);
   caret-color:var(--freq-signal-500);
@@ -778,7 +784,7 @@ html[data-lang="en"] .zh-only{display:none !important}
 .social a{
   font-family:var(--font-mono);font-weight:500;font-size:.6875rem;
   letter-spacing:.16em;text-transform:uppercase;
-  padding:10px 14px;border:1.5px solid var(--freq-ink-500);
+  padding:10px 14px;border:1.5px solid var(--freq-ink-500-live);
   color:var(--freq-cream-50);
   transition:border-color .2s var(--ease-warp), color .2s var(--ease-warp);
 }
@@ -787,7 +793,7 @@ html[data-lang="en"] .zh-only{display:none !important}
 /* Footer */
 .footer{
   margin-top:var(--space-9);
-  border-top:1px solid var(--freq-ink-500);
+  border-top:1px solid var(--freq-ink-500-live);
   padding-top:var(--space-7);
 }
 .footer__grid{
@@ -818,7 +824,7 @@ html[data-lang="en"] .zh-only{display:none !important}
   display:block;margin-top:8px;
 }
 .footer__bar{
-  border-top:1px solid var(--freq-ink-500);
+  border-top:1px solid var(--freq-ink-500-live);
   padding:var(--space-5) 0;
   display:flex;justify-content:space-between;flex-wrap:wrap;gap:var(--space-4);
   font-family:var(--font-mono);font-weight:400;font-size:.6875rem;
@@ -1793,13 +1799,21 @@ html[data-lang="en"] .zh-only{display:none !important}
     //   HIGH (108 MHz) #16243E  cool dark indigo-blue
     // Spring physics smooth the color so rapid dial wiggles don't cause flicker.
     (function ambience(){
+      // Three-point gradient endpoints for the BASE (ink-900-equivalent) layer.
+      // LOW=warm, MID=brand neutral, HIGH=cool. All ~0.20 lightness.
       const LOW  = [0x2A, 0x1E, 0x2E];
       const MID  = [0x1B, 0x16, 0x46];
       const HIGH = [0x16, 0x24, 0x3E];
-      // Spring state per channel (one of 0-255 R/G/B), values float for smooth transit
-      const rs = { value: MID[0], velocity: 0 };
-      const gs = { value: MID[1], velocity: 0 };
-      const bs = { value: MID[2], velocity: 0 };
+      // Lightness lift factors — same hue, pushed toward white in proportion.
+      // ink-700 ≈ 1.7× brighter than ink-900; ink-500 ≈ 2.7× brighter.
+      // Numbers tuned to roughly match original static ink-700 (#2D2466) and ink-500 (#4A3F8C).
+      const LIFT_700 = 1.70;
+      const LIFT_500 = 2.70;
+      // Spring state per channel × per tier (3 tiers × 3 channels = 9 values).
+      function mkSpring(v){ return { value: v, velocity: 0 }; }
+      const s900 = [mkSpring(MID[0]), mkSpring(MID[1]), mkSpring(MID[2])];
+      const s700 = [mkSpring(MID[0]*LIFT_700), mkSpring(MID[1]*LIFT_700), mkSpring(MID[2]*LIFT_700)];
+      const s500 = [mkSpring(MID[0]*LIFT_500), mkSpring(MID[1]*LIFT_500), mkSpring(MID[2]*LIFT_500)];
       const STIFF = 35, DAMP = 11;            // gentle — color shouldn't snap, it should drift
       const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       let lastT = performance.now();
@@ -1819,20 +1833,34 @@ html[data-lang="en"] .zh-only{display:none !important}
         spring.velocity += a * dt;
         spring.value    += spring.velocity * dt;
       }
+      function clampByte(v){ return Math.round(Math.max(0, Math.min(255, v))); }
+      function rgbStr(s){ return `rgb(${clampByte(s[0].value)},${clampByte(s[1].value)},${clampByte(s[2].value)})`; }
+
       function frame(now){
         const dt = Math.min(0.05, (now - lastT) / 1000);
         lastT = now;
-        const [tr, tg, tb] = targetFor(currentFreq);
+        const base = targetFor(currentFreq);
+        // Three target tiers: same hue, lifted brightness for surface and border.
+        const t900 = base;
+        const t700 = [base[0]*LIFT_700, base[1]*LIFT_700, base[2]*LIFT_700];
+        const t500 = [base[0]*LIFT_500, base[1]*LIFT_500, base[2]*LIFT_500];
+
         if (reduce){
-          rs.value = tr; gs.value = tg; bs.value = tb;
-          rs.velocity = gs.velocity = bs.velocity = 0;
+          for (let i = 0; i < 3; i++){
+            s900[i].value = t900[i]; s900[i].velocity = 0;
+            s700[i].value = t700[i]; s700[i].velocity = 0;
+            s500[i].value = t500[i]; s500[i].velocity = 0;
+          }
         } else {
-          step(rs, tr, dt); step(gs, tg, dt); step(bs, tb, dt);
+          for (let i = 0; i < 3; i++){
+            step(s900[i], t900[i], dt);
+            step(s700[i], t700[i], dt);
+            step(s500[i], t500[i], dt);
+          }
         }
-        const r = Math.round(Math.max(0, Math.min(255, rs.value)));
-        const g = Math.round(Math.max(0, Math.min(255, gs.value)));
-        const b = Math.round(Math.max(0, Math.min(255, bs.value)));
-        root.style.setProperty('--freq-ink-live', `rgb(${r},${g},${b})`);
+        root.style.setProperty('--freq-ink-live',     rgbStr(s900));
+        root.style.setProperty('--freq-ink-700-live', rgbStr(s700));
+        root.style.setProperty('--freq-ink-500-live', rgbStr(s500));
         requestAnimationFrame(frame);
       }
       requestAnimationFrame(frame);
